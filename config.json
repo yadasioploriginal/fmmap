@@ -1,0 +1,37 @@
+{
+  "server": {
+    "port": 9354,
+    "host": "0.0.0.0"
+  },
+  "map": {
+    "title": "Polska - Mapa nadajników DVB-T/DVB-T2 oraz Radio FM / DAB+ / AM",
+    "initialCenter": [52.0693, 19.4803],
+    "initialZoom": 7,
+    "minZoom": 5,
+    "maxZoom": 18,
+    "tileLayer": {
+      "url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "attribution": "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>"
+    },
+    "enableClustering": true,
+    "maxClusterRadius": 50,
+    "showCoverageOnMarkerClick": false
+  },
+  "filters": {
+    "defaultVisible": {
+      "tv": true,
+      "fm": true,
+      "dab": true,
+      "am": true
+    },
+    "defaultMinPowerKw": 0
+  },
+  "data": {
+    "dataPath": "./data/transmitters.json",
+    "rawTvPath": "./data_raw/tv/pozwolenia_ntc_r_2026-09-18.csv",
+    "rawFmPath": "./data_raw/radio/pozwolenie_ukf_r_2026-08-27.csv",
+    "rawDabPath": "./data_raw/radio/pozwolenia_dab_r_2026-08-27.csv",
+    "rawFaleSredniePath": "./data_raw/radio/pozwolenia_falesrednie_r_2026-08-27.csv",
+    "rawFaleDlugiePath": "./data_raw/radio/pozwolenia_faledlugie_2026-08-27.csv"
+  }
+}

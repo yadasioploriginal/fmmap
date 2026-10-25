@@ -1,0 +1,37 @@
+{
+  "name": "fmmap-poland",
+  "version": "1.0.0",
+  "description": "Mapa nadajników telewizyjnych DVB-T/DVB-T2 oraz radiowych FM/DAB+/AM w Polsce",
+  "main": "src/server.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts",
+    "parse-data": "tsx src/data-parser.ts"
+  },
+  "keywords": [
+    "transmitters",
+    "dvb-t",
+    "dvb-t2",
+    "fm",
+    "dab+",
+    "am",
+    "poland",
+    "map"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "csv-parse": "^7.0.3",
+    "express": "^5.3.0",
+    "iconv-lite": "^0.7.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

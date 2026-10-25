@@ -1,0 +1,306 @@
+[
+  {
+    "id": 1,
+    "name": "Jedynka",
+    "originalUrl": "http://mp3.polskieradio.pl:8900/;",
+    "streamUrl": "http://mp3.polskieradio.pl:8900/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 2,
+    "name": "Dwójka",
+    "originalUrl": "http://mp3.polskieradio.pl:8902/;",
+    "streamUrl": "http://mp3.polskieradio.pl:8902/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 3,
+    "name": "Trójka",
+    "originalUrl": "http://mp3.polskieradio.pl:8904/;",
+    "streamUrl": "http://mp3.polskieradio.pl:8904/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 4,
+    "name": "RMF FM",
+    "originalUrl": "http://195.150.20.242:8000/rmf_fm",
+    "streamUrl": "http://195.150.20.242:8000/rmf_fm",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 6,
+    "name": "Radio ZET",
+    "originalUrl": "http://zet090-02.cdn.eurozet.pl:8404/;",
+    "streamUrl": "http://zet090-02.cdn.eurozet.pl:8404/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 7,
+    "name": "Radio Złote Przeboje",
+    "originalUrl": "http://poznan7.radio.pionier.net.pl:8000/tuba9-1.mp3",
+    "streamUrl": "http://poznan7.radio.pionier.net.pl:8000/tuba9-1.mp3",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 9,
+    "name": "PR Poznań",
+    "originalUrl": "http://stream4.nadaje.com:8578/poznan",
+    "streamUrl": "http://stream4.nadaje.com:8578/poznan",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 10,
+    "name": "PR Kraków",
+    "originalUrl": "http://stream4.nadaje.com:9680/radiokrakow-s3",
+    "streamUrl": "http://stream4.nadaje.com:9680/radiokrakow-s3",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 11,
+    "name": "PR Katowice",
+    "originalUrl": "http://stream4.nadaje.com:9212/radiokatowice",
+    "streamUrl": "http://stream4.nadaje.com:9212/radiokatowice",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 12,
+    "name": "PR Opole",
+    "originalUrl": "http://dab.radio.opole.pl:8035/1",
+    "streamUrl": "http://dab.radio.opole.pl:8035/1",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 14,
+    "name": "PR Zachód",
+    "originalUrl": "http://stream02.zachod.pl:10113/;",
+    "streamUrl": "http://stream02.zachod.pl:10113/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 15,
+    "name": "Radio Tok FM",
+    "originalUrl": "http://poznan5-4.radio.pionier.net.pl:8000/tuba10-1.mp3",
+    "streamUrl": "http://poznan5-4.radio.pionier.net.pl:8000/tuba10-1.mp3",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 16,
+    "name": "PR Szczecin",
+    "originalUrl": "http://stream4.nadaje.com:11986/prs.aac",
+    "streamUrl": "http://stream4.nadaje.com:11986/prs.aac",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 18,
+    "name": "PR Białystok",
+    "originalUrl": "http://stream4.nadaje.com:15476/radiobialystok",
+    "streamUrl": "http://stream4.nadaje.com:15476/radiobialystok",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 20,
+    "name": "PR Pomorza i Kujaw",
+    "originalUrl": "http://stream.radiopik.pl:9004/;",
+    "streamUrl": "http://stream.radiopik.pl:9004/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 21,
+    "name": "Białoruskie radio racja",
+    "originalUrl": "http://air.racyja.com:8000/racja256",
+    "streamUrl": "http://air.racyja.com:8000/racja256",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 22,
+    "name": "RMF Classic",
+    "originalUrl": "http://rmfstream1.interia.pl:8000/rmf_classic",
+    "streamUrl": "http://rmfstream1.interia.pl:8000/rmf_classic",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 26,
+    "name": "Radio Rodzina",
+    "originalUrl": "http://sluchaj.radiorodzina.pl/RadioRodzinaWroclawLIVE.mp3",
+    "streamUrl": "http://sluchaj.radiorodzina.pl/RadioRodzinaWroclawLIVE.mp3",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 30,
+    "name": "Radio eM",
+    "originalUrl": "http://91.200.187.58/;",
+    "streamUrl": "http://91.200.187.58/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 31,
+    "name": "Radio Pogoda",
+    "originalUrl": "http://stream13.radioagora.pl/tuba38-1.mp3",
+    "streamUrl": "http://stream13.radioagora.pl/tuba38-1.mp3",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 32,
+    "name": "KRP Katolickie Radio Podlasie",
+    "originalUrl": "http://s1.slotex.pl:7038/;",
+    "streamUrl": "http://s1.slotex.pl:7038/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 33,
+    "name": "Radio Victoria",
+    "originalUrl": "https://stream.v4.radiovictoria.pl:8076/;?type=http&nocache=4494",
+    "streamUrl": "https://stream.v4.radiovictoria.pl:8076/;?type=http&nocache=4494",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 35,
+    "name": "Rock Radio",
+    "originalUrl": "http://stream13.radioagora.pl/tuba9004-1.mp3",
+    "streamUrl": "http://stream13.radioagora.pl/tuba9004-1.mp3",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 36,
+    "name": "Radio Doxa",
+    "originalUrl": "http://81.210.92.213:8000/;",
+    "streamUrl": "http://81.210.92.213:8000/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 38,
+    "name": "VIA - Katolickie Radio Rzeszów",
+    "originalUrl": "http://62.133.128.18:8040/;",
+    "streamUrl": "http://62.133.128.18:8040/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 39,
+    "name": "Radio Elka",
+    "originalUrl": "http://live.elka.pl:8000/elkamp3",
+    "streamUrl": "http://live.elka.pl:8000/elkamp3",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 43,
+    "name": "Radio Emaus",
+    "originalUrl": "http://stream.radioemaus.pl:8000/mp3stream",
+    "streamUrl": "http://stream.radioemaus.pl:8000/mp3stream",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 44,
+    "name": "Radio Fara",
+    "originalUrl": "http://62.133.128.22:8000/;",
+    "streamUrl": "http://62.133.128.22:8000/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 50,
+    "name": "Radio Fama Kielce",
+    "originalUrl": "http://stream2.nadaje.com:8076/",
+    "streamUrl": "http://stream2.nadaje.com:8076/",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 52,
+    "name": "Radio Parada",
+    "originalUrl": "http://stream4.nadaje.com:15274/live",
+    "streamUrl": "http://stream4.nadaje.com:15274/live",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 53,
+    "name": "Wasze Radio FM",
+    "originalUrl": "http://stream1.waszeradiofm.pl:8000/stream",
+    "streamUrl": "http://stream1.waszeradiofm.pl:8000/stream",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 55,
+    "name": "Krdp FM",
+    "originalUrl": "http://s1.slotex.pl:7762/;",
+    "streamUrl": "http://s1.slotex.pl:7762/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 56,
+    "name": "Radio 90 FM",
+    "originalUrl": "http://streams.radio90.pl:8000/radio90_128kbps_stereo.mp3",
+    "streamUrl": "http://streams.radio90.pl:8000/radio90_128kbps_stereo.mp3",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 59,
+    "name": "RMF MAXXX",
+    "originalUrl": "http://195.150.20.242:8000/rmf_maxxx",
+    "streamUrl": "http://195.150.20.242:8000/rmf_maxxx",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 61,
+    "name": "Radio Kaszebe",
+    "originalUrl": "http://stream3.nadaje.com:8048/;",
+    "streamUrl": "http://stream3.nadaje.com:8048/;",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 62,
+    "name": "Dark Radio",
+    "originalUrl": "http://dark.sh/mp3",
+    "streamUrl": "http://dark.sh/mp3",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 63,
+    "name": "Radio Nowy Świat",
+    "originalUrl": "https://stream.rcs.revma.com/ypqt40u0x1zuv",
+    "streamUrl": "https://stream.rcs.revma.com/ypqt40u0x1zuv",
+    "working": true,
+    "source": "webradio_readme"
+  },
+  {
+    "id": 38,
+    "name": "Radio Niepokalanów",
+    "originalUrl": "http://s1.slotex.pl:7122/stream",
+    "streamUrl": "http://s1.slotex.pl:7122/stream",
+    "working": true,
+    "source": "active_stream"
+  }
+]
