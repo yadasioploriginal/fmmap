@@ -858,44 +858,64 @@
       const azimuthDeg = getAzimuth(targetLat, targetLon, t.lat, t.lon);
       const compassDir = getCompassDirection(azimuthDeg);
 
-      // Propagation & Signal Calculation
-      // Transmitter effective antenna height
-      const hTx = Math.max(20, t.heightAgl + Math.max(0, t.heightAmsl - 120));
-      // Receiver height (10m for street rooftop, 1.5m mobile)
-      const hRx = isStreet ? 10 : 2;
+      // Transmitter engineered coverage radius in km
+      const R = Math.max(5, t.estimatedRangeKm || 30);
+      const ratio = distanceKm / R;
 
-      // Radio horizon in km
-      const horizonKm = 4.12 * (Math.sqrt(hTx) + Math.sqrt(hRx));
+      // Realistic Propagation & Signal Calculation based on engineered coverage contour:
+      // Standard planning reception field strength threshold (dBuV/m) at coverage edge:
+      // DVB-T2: 48 dBuV/m | FM: 54 dBuV/m | DAB+: 50 dBuV/m | AM: 60 dBuV/m
+      let minThreshold = 48;
+      if (t.category === 'fm') minThreshold = 54;
+      else if (t.category === 'dab') minThreshold = 50;
+      else if (t.category === 'am') minThreshold = 60;
 
-      // Free Space Field Strength ITU-R formula:
-      // E [dBuV/m] = 106.9 + ERP_dBW - 20*log10(d_km)
-      let fieldStrengthDbuv = 106.9 + t.powerDbw - (20 * Math.log10(Math.max(0.5, distanceKm)));
+      let percent = 0;
+      let fieldStrengthDbuv = 0;
 
-      // Additional loss if beyond radio horizon or obstacles:
-      if (distanceKm > horizonKm) {
-        const beyondKm = distanceKm - horizonKm;
-        fieldStrengthDbuv -= Math.min(45, beyondKm * 1.8);
+      // Calculate realistic signal percentage and field strength based on distance relative to coverage radius R
+      if (ratio <= 0.15) {
+        // Very close (0 - 15% of radius) - direct line-of-sight
+        percent = Math.round(95 + (1 - ratio / 0.15) * 5); // 95% -> 100%
+        fieldStrengthDbuv = minThreshold + 38;
+      } else if (ratio <= 0.50) {
+        // Strong primary coverage (15% - 50% of radius)
+        const frac = (ratio - 0.15) / 0.35;
+        percent = Math.round(95 - frac * 20); // 95% -> 75%
+        fieldStrengthDbuv = minThreshold + 38 - frac * 14;
+      } else if (ratio <= 0.80) {
+        // Good stable coverage (50% - 80% of radius)
+        const frac = (ratio - 0.50) / 0.30;
+        percent = Math.round(75 - frac * 25); // 75% -> 50%
+        fieldStrengthDbuv = minThreshold + 24 - frac * 14;
+      } else if (ratio <= 1.00) {
+        // Edge of coverage circle (80% - 100% of radius)
+        const frac = (ratio - 0.80) / 0.20;
+        percent = Math.round(50 - frac * 20); // 50% -> 30%
+        fieldStrengthDbuv = minThreshold + 10 - frac * 10;
+      } else if (ratio <= 1.15) {
+        // Marginal diffraction zone just outside coverage contour (100% - 115% of radius)
+        const frac = (ratio - 1.00) / 0.15;
+        percent = Math.round(30 - frac * 22); // 30% -> 8%
+        fieldStrengthDbuv = minThreshold - frac * 12;
+      } else if (ratio <= 1.25) {
+        // Extreme fringe (115% - 125% of radius)
+        const frac = (ratio - 1.15) / 0.10;
+        percent = Math.round(8 - frac * 8); // 8% -> 0%
+        fieldStrengthDbuv = minThreshold - 12 - frac * 10;
+      } else {
+        // Completely outside coverage area (> 125% of radius) -> 0%
+        percent = 0;
+        fieldStrengthDbuv = Math.max(8, minThreshold - 25 - (distanceKm - R * 1.25) * 0.8);
       }
 
-      // Polarization & frequency penalty:
-      const fMhz = t.frequencyUnit === 'kHz' ? t.frequency / 1000 : t.frequency;
-      if (fMhz > 450) {
-        fieldStrengthDbuv -= 6; // UHF TV attenuation
+      // Height and street rooftop antenna bonus (if within coverage)
+      if (isStreet && percent > 0 && percent < 95) {
+        percent = Math.min(100, percent + 4);
       }
 
-      fieldStrengthDbuv = Math.max(10, Math.min(100, fieldStrengthDbuv));
-
-      // Convert field strength to qualitative percentage & dBm:
-      // Typically:
-      // > 70 dBuV/m = 100% (-45 dBm) - room antenna perfect
-      // 58 - 70 dBuV/m = 80-95% (-55 dBm) - very strong
-      // 48 - 58 dBuV/m = 60-80% (-65 dBm) - good outdoor / rooftop
-      // 38 - 48 dBuV/m = 35-60% (-75 dBm) - directional antenna required
-      // < 38 dBuV/m = < 30% (-85 dBm) - weak / edge of coverage
-      let percent = Math.round(((fieldStrengthDbuv - 25) / 50) * 100);
-      percent = Math.max(5, Math.min(100, percent));
-
-      let dbm = Math.round(fieldStrengthDbuv - 120);
+      percent = Math.max(0, Math.min(100, percent));
+      let dbm = Math.round(fieldStrengthDbuv - 125);
 
       // Recommendations & Quality text
       let qualityClass = 'signal-excellent';
@@ -904,28 +924,34 @@
 
       if (percent >= 80) {
         qualityClass = 'signal-excellent';
-        qualityText = 'Maksymalna jakość sygnału (S9+)';
+        qualityText = 'Maksymalna siła i jakość sygnału (S9+)';
         adviceText = isStreet
-          ? `<strong>Idealny odbiór na ulicy:</strong> Sygnał jest bardzo mocny (${dbm} dBm / ${fieldStrengthDbuv.toFixed(1)} dBµV/m). Do odbioru telewizji lub radia wystarczy zwykła antena pokojowa lub krótki pręt bez wzmacniacza.`
-          : `<strong>Pewny zasięg w całym mieście/gminie:</strong> Średnia siła sygnału w rejonie wynosi ~${percent}%. Odbiór wewnątrz budynków oraz w samochodzie przebiega bez zakłóceń.`;
-      } else if (percent >= 60) {
+          ? `<strong>Idealny odbiór na wybranej ulicy:</strong> Sygnał jest bardzo silny (${dbm} dBm / ~${fieldStrengthDbuv.toFixed(0)} dBµV/m). Wystarczy prosta antena pokojowa lub krótki pręt bez wzmacniacza.`
+          : `<strong>Pewny zasięg w całym mieście/gminie:</strong> Średnia siła sygnału w rejonie wynosi ~${percent}%. Odbiór wewnątrz budynków oraz w pojazdach bez żadnych zakłóceń.`;
+      } else if (percent >= 55) {
         qualityClass = 'signal-good';
         qualityText = 'Dobry i stabilny sygnał (S7-S9)';
         adviceText = isStreet
-          ? `<strong>Dobry odbiór na ${escapeHtml(addr.road || 'ulicy')}:</strong> Odbiór stabilny. Dla telewizji DVB-T2 zalecana prosta antena zewnętrzna (na balkonie lub dachu) skierowana na azymut ${azimuthDeg.toFixed(0)}° (${compassDir}).`
-          : `<strong>Dobry zasięg na obszarze gminy:</strong> Większość mieszkańców ma stabilny odbiór. W miejscach zacienionych terenem może być przydatna antena zewnętrzna.`;
-      } else if (percent >= 35) {
+          ? `<strong>Dobry odbiór na ${escapeHtml(addr.road || 'ulicy')}:</strong> Odbiór stabilny. Dla telewizji lub radia zalecana prosta antena zewnętrzna (na balkonie lub dachu) skierowana na <strong>azymut ${azimuthDeg.toFixed(0)}° (${compassDir})</strong>.`
+          : `<strong>Dobry zasięg na obszarze gminy:</strong> Większość mieszkańców ma stabilny odbiór. W gęstej zabudowie zalecana antena zewnętrzna.`;
+      } else if (percent >= 30) {
         qualityClass = 'signal-medium';
-        qualityText = 'Średni sygnał (S4-S6) - na granicy';
+        qualityText = 'Średni sygnał / granica zasięgu (S4-S6)';
         adviceText = isStreet
-          ? `<strong>Wymagana antena kierunkowa:</strong> Odległość wynosi ${distanceKm.toFixed(1)} km. Konieczna jest zewnętrzna antena kierunkowa (Yagi min. 10-14 dB) ustawiona precyzyjnie na <strong>azymut ${azimuthDeg.toFixed(0)}° (${compassDir})</strong>.`
-          : `<strong>Zasięg peryferyjny w gminie:</strong> Wymagana instalacja anteny dachowej. Odbiór na antenie pokojowej może powodować zacięcia lub szumy.`;
-      } else {
+          ? `<strong>Wymagana antena kierunkowa:</strong> Odległość wynosi ${distanceKm.toFixed(1)} km (blisko granicy zasięgu ~${R} km). Do stabilnego odbioru konieczna jest zewnętrzna antena kierunkowa (Yagi min. 10-14 dB) ustawiona precyzyjnie na <strong>azymut ${azimuthDeg.toFixed(0)}° (${compassDir})</strong>.`
+          : `<strong>Zasięg peryferyjny w gminie:</strong> Rejon znajduje się na skraju zasięgu nadajnika (~${R} km). Wskazana antena dachowa ze wzmacniaczem.`;
+      } else if (percent > 0) {
         qualityClass = 'signal-weak';
-        qualityText = 'Słaby sygnał / poza zasięgiem (S1-S3)';
+        qualityText = 'Bardzo słaby sygnał / na granicy zaniku (S1-S3)';
         adviceText = isStreet
-          ? `<strong>Sygnał poniżej normy:</strong> Odległość wynosi aż ${distanceKm.toFixed(1)} km (obiekt poza horyzontem radiowym). Odbiór możliwy tylko przy bardzo wysokim maszcie dachowym i wzmacniaczu niskoszumnym.`
-          : `<strong>Brak pewnego zasięgu w gminie:</strong> Gmina znajduje się poza główną strefą pokrycia tego nadajnika. Zalecane skorzystanie z bliższego obiektu nadawczego.`;
+          ? `<strong>Sygnał szczątkowy:</strong> Odległość wynosi ${distanceKm.toFixed(1)} km i przekracza zasięg podstawowy (~${R} km). Odbiór może być niestabilny lub okresowo zanikać.`
+          : `<strong>Poza główną strefą pokrycia:</strong> Rejon leży poza nominalnym zasięgiem tego nadajnika (~${R} km). Zalecany wybór innego, bliższego nadajnika.`;
+      } else {
+        qualityClass = 'signal-none';
+        qualityText = 'Brak sygnału (0% - poza zasięgiem)';
+        adviceText = isStreet
+          ? `<strong>Brak sygnału na wybranej ulicy:</strong> Odległość wynosi <strong>${distanceKm.toFixed(1)} km</strong> i znacznie przekracza maksymalny zasięg tego nadajnika (~${R} km). Sygnał z tego obiektu nie dociera. Wybierz bliższy nadajnik obsługujący ten rejon.`
+          : `<strong>Brak zasięgu w wybranej miejscowości:</strong> Odległość wynosi <strong>${distanceKm.toFixed(1)} km</strong>, podczas gdy zasięg nadajnika to ~${R} km (miejsce jest o <strong>${(distanceKm - R).toFixed(1)} km poza strefą pokrycia</strong>). Brak możliwości odbioru tego nadajnika.`;
       }
 
       // Render Results Box
@@ -953,12 +979,12 @@
             <div class="calc-param-val">${distanceKm.toFixed(isStreet ? 2 : 1)} km</div>
           </div>
           <div class="calc-param-box">
-            <div class="calc-param-label">Azymut (Kierunek anteny)</div>
-            <div class="calc-param-val">${azimuthDeg.toFixed(0)}&deg; (${compassDir})</div>
+            <div class="calc-param-label">Zasięg nadajnika</div>
+            <div class="calc-param-val">~${R} km ${distanceKm > R ? '<span style="color:#ef4444;font-size:11px;">(Poza zasięgiem)</span>' : '<span style="color:#10b981;font-size:11px;">(W zasięgu)</span>'}</div>
           </div>
           <div class="calc-param-box">
-            <div class="calc-param-label">Moc / Natężenie pola</div>
-            <div class="calc-param-val">${dbm} dBm (${fieldStrengthDbuv.toFixed(0)} dBµV)</div>
+            <div class="calc-param-label">Azymut (Kierunek anteny)</div>
+            <div class="calc-param-val">${azimuthDeg.toFixed(0)}&deg; (${compassDir})</div>
           </div>
         </div>
 
@@ -995,19 +1021,28 @@
   function drawMeasurementLine(t, targetLat, targetLon, targetName, distKm, percent, azimuthDeg, compassDir) {
     clearMeasurementLine();
 
+    const R = Math.max(5, t.estimatedRangeKm || 30);
+    const inRange = distKm <= R;
+    const lineColor = inRange ? '#38bdf8' : '#ef4444';
+    const percentColor = percent >= 60 ? '#10b981' : percent >= 30 ? '#f59e0b' : '#ef4444';
+
     // Line
     measurementLine = L.polyline([[t.lat, t.lon], [targetLat, targetLon]], {
-      color: '#38bdf8',
+      color: lineColor,
       weight: 3,
-      dashArray: '6, 6',
+      dashArray: inRange ? '6, 6' : '4, 8',
       opacity: 0.85
     }).addTo(map);
 
     // Target Marker
+    const targetIconHtml = inRange
+      ? `<div style="background:#10b981;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(16,185,129,0.8);border:2px solid #fff;font-size:12px;">🎯</div>`
+      : `<div style="background:#ef4444;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(239,68,68,0.8);border:2px solid #fff;font-size:12px;">❌</div>`;
+
     targetLocationMarker = L.marker([targetLat, targetLon], {
       icon: L.divIcon({
         className: 'target-pin-wrapper',
-        html: `<div style="background:#ef4444;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(239,68,68,0.8);border:2px solid #fff;font-size:12px;">🎯</div>`,
+        html: targetIconHtml,
         iconSize: [26, 26],
         iconAnchor: [13, 13]
       })
@@ -1015,13 +1050,14 @@
 
     targetLocationMarker.bindPopup(`
       <div style="font-size:12px;">
-        <strong style="color:#38bdf8;font-size:13px;">Punkt odbioru:</strong>
+        <strong style="color:${inRange ? '#38bdf8' : '#ef4444'};font-size:13px;">${inRange ? 'Punkt odbioru (W zasięgu):' : 'Punkt odbioru (Poza zasięgiem):'}</strong>
         <div style="margin:2px 0 6px 0;font-weight:600;">${escapeHtml(targetName)}</div>
         <table style="width:100%;font-size:11px;">
           <tr><td>Nadajnik:</td><td><strong>${escapeHtml(t.name)}</strong></td></tr>
           <tr><td>Odległość:</td><td><strong>${distKm.toFixed(2)} km</strong></td></tr>
+          <tr><td>Zasięg nadajnika:</td><td><strong>~${R} km</strong></td></tr>
           <tr><td>Azymut anteny:</td><td><strong>${azimuthDeg.toFixed(0)}° (${compassDir})</strong></td></tr>
-          <tr><td>Szacowany sygnał:</td><td><strong style="color:#10b981;">${percent}%</strong></td></tr>
+          <tr><td>Szacowany sygnał:</td><td><strong style="color:${percentColor};">${percent}% (${percent === 0 ? 'Brak sygnału' : percent >= 70 ? 'Bardzo silny' : 'Średni'})</strong></td></tr>
         </table>
       </div>
     `).openPopup();

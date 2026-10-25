@@ -1310,6 +1310,7 @@ body {
 .signal-good { background: linear-gradient(90deg, #3b82f6, #2563eb); color: #3b82f6; }
 .signal-medium { background: linear-gradient(90deg, #f59e0b, #d97706); color: #f59e0b; }
 .signal-weak { background: linear-gradient(90deg, #ef4444, #dc2626); color: #ef4444; }
+.signal-none { background: linear-gradient(90deg, #64748b, #475569); color: #94a3b8; }
 
 .calc-params-grid {
   display: grid;
