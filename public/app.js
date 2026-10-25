@@ -38,8 +38,136 @@
   let currentAudioStream = null;
   let rdsPollingInterval = null;
 
+  // Language / i18n
+  let currentLang = localStorage.getItem('fmmap_lang') || 'pl';
+
+  const i18n = {
+    pl: {
+      appTitle: 'Polska - Mapa Nadajników DVB-T/DVB-T2 & Radio FM/DAB+/AM',
+      appName: 'Nadajniki PL',
+      appSub: 'DVB-T/T2 • FM • DAB+ • AM',
+      tvPill: 'Telewizja DVB-T/T2',
+      fmPill: 'Radio FM',
+      dabPill: 'DAB+',
+      amPill: 'AM (MW/LW)',
+      searchPlaceholder: 'Szukaj stacji, miasta, MUX, częstotliwości...',
+      clearSearch: 'Wyczyść',
+      radioListenBtn: 'Odsłuch radia',
+      locateBtn: 'Lokalizacja',
+      allCoverageBtn: 'Wszystkie zasięgi',
+      listViewBtn: 'Lista',
+      filtersTitle: 'Filtry i parametry',
+      resetBtn: 'Resetuj',
+      voivodeshipLabel: 'Województwo',
+      allVoivodeships: 'Wszystkie województwa',
+      muxLabel: 'Multipleks TV',
+      allMuxes: 'Wszystkie multipleksy',
+      systemLabel: 'Standard emisji TV',
+      allSystems: 'Wszystkie standardy',
+      onlyDvbT2: 'Tylko DVB-T2',
+      onlyDvbT: 'Tylko DVB-T',
+      minPowerLabel: 'Min. moc ERP:',
+      allPower: 'Wszystkie',
+      polarizationLabel: 'Polaryzacja anteny',
+      allPol: 'Wszystkie',
+      horizontalPol: 'Pozioma (H)',
+      verticalPol: 'Pionowa (V)',
+      statsTitle: 'Statystyki zestawienia',
+      statVisible: 'Widocznych obiektów:',
+      statTotal: 'Wszystkich w bazie:',
+      statAvgPower: 'Średnia moc ERP:',
+      statMaxPower: 'Najsilniejszy nadajnik:',
+      legendTitle: 'Legenda mapy',
+      legendTv: 'Telewizja (DVB-T / DVB-T2)',
+      legendFm: 'Radio FM (UKF)',
+      legendDab: 'Radio cyfrowe (DAB+)',
+      legendAm: 'Radio AM (Solec Kujawski, MW)',
+      clearCoverageFloating: 'Wyłącz obręb nadawania',
+      clearMeasureLine: 'Usuń linię pomiaru',
+      matchedTransmitters: 'Lista dopasowanych nadajników',
+      liveRadioTitle: '📻 Stacje radiowe na żywo',
+      searchRadioPlaceholder: 'Szukaj stacji do odsłuchu...',
+      liveBadge: 'NA ŻYWO',
+      calcModalTitle: 'Kalkulator Sygnału',
+      calcHeading: 'Obliczanie zasięgu nadajnika',
+      calcLocationLabel: 'Wpisz miasto, gminę lub ulicę:',
+      calcLocationPlaceholder: 'np. Radom, gmina Piaseczno, Warszawa Marszałkowska 10...',
+      calcSubmit: 'Oblicz sygnał',
+      calcHint: 'Wpisz nazwę miejscowości lub gminy (dla szacunku ogólnego) albo dokładną ulicę (dla precyzyjnego wyliczenia sygnału).',
+      calcLoadingText: 'Wyszukiwanie lokalizacji i obliczanie propagacji fal radiowych...',
+      calcShowOnMap: 'Pokaż linię zasięgu na mapie',
+      calcClose: 'Zamknij kalkulator',
+      calcDist: 'Odległość do nadajnika',
+      calcRange: 'Zasięg nadajnika',
+      calcAzimuth: 'Azymut (Kierunek anteny)',
+      calcSignalQuality: 'Siła i jakość sygnału:'
+    },
+    en: {
+      appTitle: 'Poland - DVB-T/DVB-T2 TV & FM/DAB+/AM Radio Transmitter Map',
+      appName: 'Transmitters PL',
+      appSub: 'DVB-T/T2 • FM • DAB+ • AM',
+      tvPill: 'DVB-T/T2 Television',
+      fmPill: 'FM Radio',
+      dabPill: 'DAB+',
+      amPill: 'AM (MW/LW)',
+      searchPlaceholder: 'Search station, city, MUX, frequency...',
+      clearSearch: 'Clear',
+      radioListenBtn: 'Radio Streams',
+      locateBtn: 'Location',
+      allCoverageBtn: 'All Coverages',
+      listViewBtn: 'List',
+      filtersTitle: 'Filters & Settings',
+      resetBtn: 'Reset',
+      voivodeshipLabel: 'Voivodeship / Region',
+      allVoivodeships: 'All voivodeships',
+      muxLabel: 'TV Multiplex',
+      allMuxes: 'All multiplexes',
+      systemLabel: 'TV Broadcast Standard',
+      allSystems: 'All standards',
+      onlyDvbT2: 'DVB-T2 only',
+      onlyDvbT: 'DVB-T only',
+      minPowerLabel: 'Min. ERP Power:',
+      allPower: 'All',
+      polarizationLabel: 'Antenna Polarization',
+      allPol: 'All',
+      horizontalPol: 'Horizontal (H)',
+      verticalPol: 'Vertical (V)',
+      statsTitle: 'Overview Statistics',
+      statVisible: 'Visible transmitters:',
+      statTotal: 'Total in database:',
+      statAvgPower: 'Average ERP Power:',
+      statMaxPower: 'Strongest transmitter:',
+      legendTitle: 'Map Legend',
+      legendTv: 'Television (DVB-T / DVB-T2)',
+      legendFm: 'FM Radio (VHF)',
+      legendDab: 'Digital Radio (DAB+)',
+      legendAm: 'AM Radio (Solec Kujawski, MW)',
+      clearCoverageFloating: 'Disable coverage circle',
+      clearMeasureLine: 'Clear measurement line',
+      matchedTransmitters: 'Matched transmitters list',
+      liveRadioTitle: '📻 Live Radio Streams',
+      searchRadioPlaceholder: 'Search radio station to play...',
+      liveBadge: 'LIVE',
+      calcModalTitle: 'Signal Calculator',
+      calcHeading: 'Transmitter Coverage & Signal Calculation',
+      calcLocationLabel: 'Enter city, municipality, or street address:',
+      calcLocationPlaceholder: 'e.g. Radom, Piaseczno, Warsaw Marszalkowska 10...',
+      calcSubmit: 'Calculate signal',
+      calcHint: 'Enter a city/town or municipality for general area estimation, or a street name for precise building-level calculation.',
+      calcLoadingText: 'Searching location and computing radio propagation...',
+      calcShowOnMap: 'Show signal line on map',
+      calcClose: 'Close calculator',
+      calcDist: 'Distance to transmitter',
+      calcRange: 'Transmitter range',
+      calcAzimuth: 'Azimuth (Antenna direction)',
+      calcSignalQuality: 'Signal strength & quality:'
+    }
+  };
+
   // DOM elements
   const els = {
+    langPlBtn: document.getElementById('langPlBtn'),
+    langEnBtn: document.getElementById('langEnBtn'),
     catTv: document.getElementById('cat-tv'),
     catFm: document.getElementById('cat-fm'),
     catDab: document.getElementById('cat-dab'),
@@ -119,6 +247,102 @@
     }, duration);
   }
 
+  // Language management
+  function setLanguage(lang) {
+    if (lang !== 'pl' && lang !== 'en') return;
+    currentLang = lang;
+    localStorage.setItem('fmmap_lang', lang);
+    applyLanguage();
+  }
+
+  function applyLanguage() {
+    const t = i18n[currentLang] || i18n.pl;
+    document.documentElement.lang = currentLang;
+    document.title = t.appTitle;
+
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (t[key]) {
+        el.textContent = t[key];
+      }
+    });
+
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+      const key = el.getAttribute('data-i18n-ph');
+      if (t[key]) {
+        el.placeholder = t[key];
+      }
+    });
+
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+      const key = el.getAttribute('data-i18n-title');
+      if (t[key]) {
+        el.title = t[key];
+      }
+    });
+
+    if (els.langPlBtn && els.langEnBtn) {
+      els.langPlBtn.classList.toggle('active', currentLang === 'pl');
+      els.langEnBtn.classList.toggle('active', currentLang === 'en');
+    }
+
+    if (els.audioPlayPauseBtn) els.audioPlayPauseBtn.title = currentLang === 'en' ? 'Play / Pause' : 'Odtwórz / Pauza';
+    if (els.audioStopBtn) els.audioStopBtn.title = currentLang === 'en' ? 'Stop' : 'Zatrzymaj';
+    if (els.audioCloseBtn) els.audioCloseBtn.title = currentLang === 'en' ? 'Close player' : 'Zamknij odtwarzacz';
+
+    // Source info text
+    const sourceEl = document.querySelector('.source-info');
+    if (sourceEl) {
+      if (currentLang === 'en') {
+        sourceEl.innerHTML = `
+          <p>Data: Official registry of radio permits by <strong>UKE (Office of Electronic Communications)</strong>.</p>
+          <p>Radio streaming: Verified streams from <strong>github.com/web-radio/webradio</strong>.</p>
+          <p>Port: <strong>9354</strong> | Configuration: <code>config.json</code></p>
+        `;
+      } else {
+        sourceEl.innerHTML = `
+          <p>Dane: Oficjalny wykaz pozwoleń radiowych <strong>UKE (Urząd Komunikacji Elektronicznej)</strong>.</p>
+          <p>Odsłuch radia: Zweryfikowane strumienie z <strong>github.com/web-radio/webradio</strong>.</p>
+          <p>Port: <strong>9354</strong> | Konfiguracja: <code>config.json</code></p>
+        `;
+      }
+    }
+
+    // Re-render markers so popup content updates language
+    if (map && clusterGroup) {
+      renderMarkers();
+    }
+
+    // Re-render list view if open
+    if (els.listDrawer && !els.listDrawer.classList.contains('hidden')) {
+      renderListView();
+    }
+
+    // Re-render radio drawer
+    if (verifiedStreams && verifiedStreams.length > 0) {
+      renderRadioStreamsList(verifiedStreams);
+    }
+  }
+
+  function getCategoryLabel(category, lang = currentLang) {
+    if (lang === 'en') {
+      switch (category) {
+        case 'tv': return 'DVB-T/T2 Television';
+        case 'fm': return 'FM Radio';
+        case 'dab': return 'DAB+ Digital Radio';
+        case 'am': return 'AM Radio';
+        default: return category;
+      }
+    }
+    switch (category) {
+      case 'tv': return 'Telewizja DVB-T/T2';
+      case 'fm': return 'Radio FM';
+      case 'dab': return 'Radio cyfrowe DAB+';
+      case 'am': return 'Radio AM';
+      default: return category;
+    }
+  }
+
   // Pin Icons Factory
   function createPinIcon(category) {
     let glyph = '📡';
@@ -173,6 +397,9 @@
 
       // 4. Attach Event Listeners
       setupEvents();
+
+      // Apply initial language (PL / EN)
+      applyLanguage();
 
       // 5. Initial Render
       applyFilters();
@@ -276,19 +503,20 @@
   // Render Radio Streams in Drawer
   function renderRadioStreamsList(streams) {
     els.radioStreamsList.innerHTML = '';
+    const isEn = currentLang === 'en';
     streams.forEach(s => {
       const div = document.createElement('div');
       div.className = 'radio-stream-item';
       div.innerHTML = `
         <div class="radio-stream-info">
           <strong>${escapeHtml(s.name)}</strong>
-          <span>Odsłuch na żywo &bull; MP3/AAC</span>
+          <span>${isEn ? 'Live streaming &bull; MP3/AAC' : 'Odsłuch na żywo &bull; MP3/AAC'}</span>
         </div>
-        <button class="radio-play-btn" title="Odtwórz stację">▶</button>
+        <button class="radio-play-btn" title="${isEn ? 'Play station' : 'Odtwórz stację'}">▶</button>
       `;
 
       div.onclick = () => {
-        playAudioStream(s.name, s.streamUrl, 'Strumień internetowy (webradio)');
+        playAudioStream(s.name, s.streamUrl, isEn ? 'Online radio stream (webradio)' : 'Strumień internetowy (webradio)');
       };
 
       els.radioStreamsList.appendChild(div);
@@ -547,13 +775,24 @@
 
   // Create Popup Content HTML
   function createPopupHtml(t) {
+    const isEn = currentLang === 'en';
     const badgeClass = `badge-${t.category}`;
+    const categoryName = getCategoryLabel(t.category, currentLang);
     const freqDisplay = t.channel 
-      ? `${t.frequency} ${t.frequencyUnit} (k. ${t.channel})`
+      ? `${t.frequency} ${t.frequencyUnit} (${isEn ? 'ch.' : 'k.'} ${t.channel})`
       : `${t.frequency} ${t.frequencyUnit}`;
 
-    const polDisplay = t.polarization === 'H' ? 'Pozioma (H)' : t.polarization === 'V' ? 'Pionowa (V)' : t.polarization;
-    const charDisplay = t.radiationPattern === 'ND' ? 'Dookólna (ND)' : t.radiationPattern === 'D' ? 'Kierunkowa (D)' : t.radiationPattern;
+    const polDisplay = t.polarization === 'H' 
+      ? (isEn ? 'Horizontal (H)' : 'Pozioma (H)') 
+      : t.polarization === 'V' 
+      ? (isEn ? 'Vertical (V)' : 'Pionowa (V)') 
+      : t.polarization;
+
+    const charDisplay = t.radiationPattern === 'ND' 
+      ? (isEn ? 'Omnidirectional (ND)' : 'Dookólna (ND)') 
+      : t.radiationPattern === 'D' 
+      ? (isEn ? 'Directional (D)' : 'Kierunkowa (D)') 
+      : t.radiationPattern;
 
     const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lon}`;
     const isCircleActive = activeCoverageCircles.has(t.id);
@@ -563,7 +802,7 @@
     if (t.streamUrl) {
       audioHtml = `
         <button class="popup-audio-btn" id="btn-audio-${t.id}">
-          <span>▶️ Odsłuchaj na żywo: ${escapeHtml(t.streamName || t.programOrMux)}</span>
+          <span>▶️ ${isEn ? 'Listen live:' : 'Odsłuchaj na żywo:'} ${escapeHtml(t.streamName || t.programOrMux)}</span>
         </button>
       `;
     }
@@ -575,7 +814,7 @@
         <div class="popup-rds-badge" id="popup-rds-${t.id}">
           <span class="rds-pulse-dot"></span>
           <span class="popup-rds-label">RDS:</span>
-          <span class="popup-rds-title" id="popup-rds-title-${t.id}">Pobieranie danych na żywo...</span>
+          <span class="popup-rds-title" id="popup-rds-title-${t.id}">${isEn ? 'Loading live data...' : 'Pobieranie danych na żywo...'}</span>
         </div>
       `;
     }
@@ -585,7 +824,7 @@
     if (t.channelsList && t.channelsList.length > 0) {
       tvChannelsHtml = `
         <div class="popup-tv-channels">
-          <strong>Kanały w ${escapeHtml(t.programOrMux)}:</strong>
+          <strong>${isEn ? `Channels in ${escapeHtml(t.programOrMux)}:` : `Kanały w ${escapeHtml(t.programOrMux)}:`}</strong>
           <div>${escapeHtml(t.channelsList.join(', '))}</div>
         </div>
       `;
@@ -594,7 +833,7 @@
     return `
       <div class="popup-container">
         <div class="popup-badge-row">
-          <span class="badge ${badgeClass}">${t.categoryLabel}</span>
+          <span class="badge ${badgeClass}">${categoryName}</span>
           <span style="font-size:11px;color:var(--text-muted);font-weight:600;">${t.system}</span>
         </div>
         <div class="popup-title">${escapeHtml(t.name)}</div>
@@ -604,25 +843,27 @@
         ${rdsHtml}
 
         <table class="popup-info-table">
-          <tr><td>Co nadaje:</td><td><strong>${escapeHtml(t.programOrMux)}</strong></td></tr>
-          <tr><td>Kto nadaje:</td><td><strong>${escapeHtml(t.broadcaster)}</strong></td></tr>
-          <tr><td>Częstotliwość:</td><td>${freqDisplay}</td></tr>
-          <tr><td>Moc ERP:</td><td><strong>${t.powerKw} kW</strong> (${t.powerDbw} dBW)</td></tr>
-          <tr><td>Wysokość:</td><td>${t.heightAgl} m n.p.t. (${t.heightAmsl} m n.p.m.)</td></tr>
-          <tr><td>Polaryzacja:</td><td>${polDisplay} (${charDisplay})</td></tr>
+          <tr><td>${isEn ? 'Program / MUX:' : 'Co nadaje:'}</td><td><strong>${escapeHtml(t.programOrMux)}</strong></td></tr>
+          <tr><td>${isEn ? 'Broadcaster:' : 'Kto nadaje:'}</td><td><strong>${escapeHtml(t.broadcaster)}</strong></td></tr>
+          <tr><td>${isEn ? 'Frequency:' : 'Częstotliwość:'}</td><td>${freqDisplay}</td></tr>
+          <tr><td>${isEn ? 'ERP Power:' : 'Moc ERP:'}</td><td><strong>${t.powerKw} kW</strong> (${t.powerDbw} dBW)</td></tr>
+          <tr><td>${isEn ? 'Antenna Height:' : 'Wysokość:'}</td><td>${t.heightAgl} m ${isEn ? 'AGL' : 'n.p.t.'} (${t.heightAmsl} m ${isEn ? 'AMSL' : 'n.p.m.'})</td></tr>
+          <tr><td>${isEn ? 'Polarization:' : 'Polaryzacja:'}</td><td>${polDisplay} (${charDisplay})</td></tr>
         </table>
 
         ${tvChannelsHtml}
 
         <div class="popup-btn-row">
           <button class="popup-btn ${isCircleActive ? 'popup-btn-active-circle' : ''}" id="btn-coverage-${t.id}">
-            ${isCircleActive ? '❌ Wyłącz obręb' : `📡 Zasięg (~${t.estimatedRangeKm} km)`}
+            ${isCircleActive 
+              ? (isEn ? '❌ Disable coverage' : '❌ Wyłącz obręb') 
+              : (isEn ? `📡 Coverage (~${t.estimatedRangeKm} km)` : `📡 Zasięg (~${t.estimatedRangeKm} km)`)}
           </button>
-          <button class="popup-btn" id="btn-calc-${t.id}">📐 Oblicz sygnał</button>
-          <button class="popup-btn" id="btn-detail-${t.id}">ℹ️ Więcej</button>
+          <button class="popup-btn" id="btn-calc-${t.id}">${isEn ? '📐 Signal Calc' : '📐 Oblicz sygnał'}</button>
+          <button class="popup-btn" id="btn-detail-${t.id}">${isEn ? 'ℹ️ More' : 'ℹ️ Więcej'}</button>
         </div>
         <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
-          <button id="btn-copy-${t.id}" style="background:none;border:none;color:var(--text-dim);font-size:11px;cursor:pointer;">📋 Kopiuj współrzędne</button>
+          <button id="btn-copy-${t.id}" style="background:none;border:none;color:var(--text-dim);font-size:11px;cursor:pointer;">${isEn ? '📋 Copy coordinates' : '📋 Kopiuj współrzędne'}</button>
           <a href="${gmapsUrl}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:11px;text-decoration:none;">Google Maps &rarr;</a>
         </div>
       </div>
@@ -783,8 +1024,9 @@
 
   // Signal Coverage Calculator Implementation
   function openSignalCalculator(t) {
+    const isEn = currentLang === 'en';
     currentCalcTransmitter = t;
-    els.calcTransmitterTitle.textContent = `Kalkulator sygnału: ${t.name}`;
+    els.calcTransmitterTitle.textContent = isEn ? `Signal Calculator: ${t.name}` : `Kalkulator sygnału: ${t.name}`;
     els.calcTopInfo.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div>
@@ -794,7 +1036,7 @@
         </div>
         <div style="text-align:right;">
           <div style="font-weight:700;color:#fff;">${t.powerKw} kW ERP</div>
-          <div style="font-size:11px;color:var(--text-muted);">${t.heightAgl} m n.p.t. (${t.frequency} ${t.frequencyUnit})</div>
+          <div style="font-size:11px;color:var(--text-muted);">${t.heightAgl} m ${isEn ? 'AGL' : 'n.p.t.'} (${t.frequency} ${t.frequencyUnit})</div>
         </div>
       </div>
     `;
@@ -807,9 +1049,10 @@
   }
 
   async function calculateSignalForLocation() {
+    const isEn = currentLang === 'en';
     const q = els.calcLocationInput.value.trim();
     if (!q) {
-      showToast('Wpisz miasto, gminę lub ulicę!');
+      showToast(isEn ? 'Enter city, municipality, or street address!' : 'Wpisz miasto, gminę lub ulicę!');
       return;
     }
 
@@ -827,7 +1070,9 @@
       if (!results || results.length === 0) {
         els.calcResults.innerHTML = `
           <div style="color:#fca5a5;padding:12px;background:rgba(239,68,68,0.1);border-radius:6px;">
-            Nie znaleziono lokalizacji "<strong>${escapeHtml(q)}</strong>" w Polsce. Sprawdź pisownię lub dodaj miasto (np. "Warszawa Marszałkowska").
+            ${isEn 
+              ? `Could not find location "<strong>${escapeHtml(q)}</strong>" in Poland. Please check spelling or specify city.` 
+              : `Nie znaleziono lokalizacji "<strong>${escapeHtml(q)}</strong>" w Polsce. Sprawdź pisownię lub dodaj miasto (np. "Warszawa Marszałkowska").`}
           </div>
         `;
         els.calcResults.classList.remove('hidden');
@@ -845,26 +1090,31 @@
       const isGmina = Boolean(addr.municipality || match.display_name.toLowerCase().includes('gmina'));
       const isCity = Boolean(addr.city || addr.town || addr.village);
 
-      let locTypeLabel = 'Miejscowość';
+      let locTypeLabel = isEn ? 'City / Town' : 'Miejscowość';
       let locBadgeClass = 'badge-fm';
-      if (isStreet) { locTypeLabel = 'Ulica / Dokładny adres'; locBadgeClass = 'badge-tv'; }
-      else if (isGmina) { locTypeLabel = 'Gmina'; locBadgeClass = 'badge-dab'; }
-      else if (isCity) { locTypeLabel = 'Miasto'; locBadgeClass = 'badge-fm'; }
+      if (isStreet) { 
+        locTypeLabel = isEn ? 'Street / Exact Address' : 'Ulica / Dokładny adres'; 
+        locBadgeClass = 'badge-tv'; 
+      } else if (isGmina) { 
+        locTypeLabel = isEn ? 'Municipality' : 'Gmina'; 
+        locBadgeClass = 'badge-dab'; 
+      } else if (isCity) { 
+        locTypeLabel = isEn ? 'City' : 'Miasto'; 
+        locBadgeClass = 'badge-fm'; 
+      }
 
       // Distance in km
       const distanceKm = getDistanceKm(t.lat, t.lon, targetLat, targetLon);
 
       // Azimuth from Target to Transmitter (Antenna direction!)
       const azimuthDeg = getAzimuth(targetLat, targetLon, t.lat, t.lon);
-      const compassDir = getCompassDirection(azimuthDeg);
+      const compassDir = getCompassDirection(azimuthDeg, currentLang);
 
       // Transmitter engineered coverage radius in km
       const R = Math.max(5, t.estimatedRangeKm || 30);
       const ratio = distanceKm / R;
 
       // Realistic Propagation & Signal Calculation based on engineered coverage contour:
-      // Standard planning reception field strength threshold (dBuV/m) at coverage edge:
-      // DVB-T2: 48 dBuV/m | FM: 54 dBuV/m | DAB+: 50 dBuV/m | AM: 60 dBuV/m
       let minThreshold = 48;
       if (t.category === 'fm') minThreshold = 54;
       else if (t.category === 'dab') minThreshold = 50;
@@ -873,43 +1123,35 @@
       let percent = 0;
       let fieldStrengthDbuv = 0;
 
-      // Calculate realistic signal percentage and field strength based on distance relative to coverage radius R
       if (ratio <= 0.15) {
-        // Very close (0 - 15% of radius) - direct line-of-sight
-        percent = Math.round(95 + (1 - ratio / 0.15) * 5); // 95% -> 100%
+        percent = Math.round(95 + (1 - ratio / 0.15) * 5);
         fieldStrengthDbuv = minThreshold + 38;
       } else if (ratio <= 0.50) {
-        // Strong primary coverage (15% - 50% of radius)
         const frac = (ratio - 0.15) / 0.35;
-        percent = Math.round(95 - frac * 20); // 95% -> 75%
+        percent = Math.round(95 - frac * 20);
         fieldStrengthDbuv = minThreshold + 38 - frac * 14;
       } else if (ratio <= 0.80) {
-        // Good stable coverage (50% - 80% of radius)
         const frac = (ratio - 0.50) / 0.30;
-        percent = Math.round(75 - frac * 25); // 75% -> 50%
+        percent = Math.round(75 - frac * 25);
         fieldStrengthDbuv = minThreshold + 24 - frac * 14;
       } else if (ratio <= 1.00) {
-        // Edge of coverage circle (80% - 100% of radius)
         const frac = (ratio - 0.80) / 0.20;
-        percent = Math.round(50 - frac * 20); // 50% -> 30%
+        percent = Math.round(50 - frac * 20);
         fieldStrengthDbuv = minThreshold + 10 - frac * 10;
       } else if (ratio <= 1.15) {
-        // Marginal diffraction zone just outside coverage contour (100% - 115% of radius)
         const frac = (ratio - 1.00) / 0.15;
-        percent = Math.round(30 - frac * 22); // 30% -> 8%
+        percent = Math.round(30 - frac * 22);
         fieldStrengthDbuv = minThreshold - frac * 12;
       } else if (ratio <= 1.25) {
-        // Extreme fringe (115% - 125% of radius)
         const frac = (ratio - 1.15) / 0.10;
-        percent = Math.round(8 - frac * 8); // 8% -> 0%
+        percent = Math.round(8 - frac * 8);
         fieldStrengthDbuv = minThreshold - 12 - frac * 10;
       } else {
-        // Completely outside coverage area (> 125% of radius) -> 0%
         percent = 0;
         fieldStrengthDbuv = Math.max(8, minThreshold - 25 - (distanceKm - R * 1.25) * 0.8);
       }
 
-      // Height and street rooftop antenna bonus (if within coverage)
+      // Height and street rooftop antenna bonus
       if (isStreet && percent > 0 && percent < 95) {
         percent = Math.min(100, percent + 4);
       }
@@ -919,39 +1161,59 @@
 
       // Recommendations & Quality text
       let qualityClass = 'signal-excellent';
-      let qualityText = 'Bardzo silny (100% odbiór)';
+      let qualityText = isEn ? 'Very strong (100% reception)' : 'Bardzo silny (100% odbiór)';
       let adviceText = '';
 
       if (percent >= 80) {
         qualityClass = 'signal-excellent';
-        qualityText = 'Maksymalna siła i jakość sygnału (S9+)';
+        qualityText = isEn ? 'Maximum signal strength & quality (S9+)' : 'Maksymalna siła i jakość sygnału (S9+)';
         adviceText = isStreet
-          ? `<strong>Idealny odbiór na wybranej ulicy:</strong> Sygnał jest bardzo silny (${dbm} dBm / ~${fieldStrengthDbuv.toFixed(0)} dBµV/m). Wystarczy prosta antena pokojowa lub krótki pręt bez wzmacniacza.`
-          : `<strong>Pewny zasięg w całym mieście/gminie:</strong> Średnia siła sygnału w rejonie wynosi ~${percent}%. Odbiór wewnątrz budynków oraz w pojazdach bez żadnych zakłóceń.`;
+          ? (isEn
+            ? `<strong>Ideal reception on selected street:</strong> Signal is very strong (${dbm} dBm / ~${fieldStrengthDbuv.toFixed(0)} dBµV/m). A simple indoor antenna or short rod without amplifier is sufficient.`
+            : `<strong>Idealny odbiór na wybranej ulicy:</strong> Sygnał jest bardzo silny (${dbm} dBm / ~${fieldStrengthDbuv.toFixed(0)} dBµV/m). Wystarczy prosta antena pokojowa lub krótki pręt bez wzmacniacza.`)
+          : (isEn
+            ? `<strong>Reliable coverage across entire town/area:</strong> Average signal in this area is ~${percent}%. Indoor and vehicle reception is completely stable.`
+            : `<strong>Pewny zasięg w całym mieście/gminie:</strong> Średnia siła sygnału w rejonie wynosi ~${percent}%. Odbiór wewnątrz budynków oraz w pojazdach bez żadnych zakłóceń.`);
       } else if (percent >= 55) {
         qualityClass = 'signal-good';
-        qualityText = 'Dobry i stabilny sygnał (S7-S9)';
+        qualityText = isEn ? 'Good and stable signal (S7-S9)' : 'Dobry i stabilny sygnał (S7-S9)';
         adviceText = isStreet
-          ? `<strong>Dobry odbiór na ${escapeHtml(addr.road || 'ulicy')}:</strong> Odbiór stabilny. Dla telewizji lub radia zalecana prosta antena zewnętrzna (na balkonie lub dachu) skierowana na <strong>azymut ${azimuthDeg.toFixed(0)}° (${compassDir})</strong>.`
-          : `<strong>Dobry zasięg na obszarze gminy:</strong> Większość mieszkańców ma stabilny odbiór. W gęstej zabudowie zalecana antena zewnętrzna.`;
+          ? (isEn
+            ? `<strong>Good reception on ${escapeHtml(addr.road || 'street')}:</strong> Reception is stable. A simple outdoor antenna (balcony or roof) aimed at <strong>azimuth ${azimuthDeg.toFixed(0)}° (${compassDir})</strong> is recommended.`
+            : `<strong>Dobry odbiór na ${escapeHtml(addr.road || 'ulicy')}:</strong> Odbiór stabilny. Dla telewizji lub radia zalecana prosta antena zewnętrzna (na balkonie lub dachu) skierowana na <strong>azymut ${azimuthDeg.toFixed(0)}° (${compassDir})</strong>.`)
+          : (isEn
+            ? `<strong>Good coverage across municipality:</strong> Most residents have stable reception. In dense urban clutter, an outdoor antenna is recommended.`
+            : `<strong>Dobry zasięg na obszarze gminy:</strong> Większość mieszkańców ma stabilny odbiór. W gęstej zabudowie zalecana antena zewnętrzna.`);
       } else if (percent >= 30) {
         qualityClass = 'signal-medium';
-        qualityText = 'Średni sygnał / granica zasięgu (S4-S6)';
+        qualityText = isEn ? 'Medium signal / coverage fringe (S4-S6)' : 'Średni sygnał / granica zasięgu (S4-S6)';
         adviceText = isStreet
-          ? `<strong>Wymagana antena kierunkowa:</strong> Odległość wynosi ${distanceKm.toFixed(1)} km (blisko granicy zasięgu ~${R} km). Do stabilnego odbioru konieczna jest zewnętrzna antena kierunkowa (Yagi min. 10-14 dB) ustawiona precyzyjnie na <strong>azymut ${azimuthDeg.toFixed(0)}° (${compassDir})</strong>.`
-          : `<strong>Zasięg peryferyjny w gminie:</strong> Rejon znajduje się na skraju zasięgu nadajnika (~${R} km). Wskazana antena dachowa ze wzmacniaczem.`;
+          ? (isEn
+            ? `<strong>Directional antenna required:</strong> Distance is ${distanceKm.toFixed(1)} km (near coverage fringe ~${R} km). For reliable reception, an outdoor directional antenna (Yagi min. 10-14 dB) aimed precisely at <strong>azimuth ${azimuthDeg.toFixed(0)}° (${compassDir})</strong> is necessary.`
+            : `<strong>Wymagana antena kierunkowa:</strong> Odległość wynosi ${distanceKm.toFixed(1)} km (blisko granicy zasięgu ~${R} km). Do stabilnego odbioru konieczna jest zewnętrzna antena kierunkowa (Yagi min. 10-14 dB) ustawiona precyzyjnie na <strong>azymut ${azimuthDeg.toFixed(0)}° (${compassDir})</strong>.`)
+          : (isEn
+            ? `<strong>Peripheral fringe coverage in municipality:</strong> Location is at the edge of nominal transmitter range (~${R} km). A rooftop antenna with a preamplifier is recommended.`
+            : `<strong>Zasięg peryferyjny w gminie:</strong> Rejon znajduje się na skraju zasięgu nadajnika (~${R} km). Wskazana antena dachowa ze wzmacniaczem.`);
       } else if (percent > 0) {
         qualityClass = 'signal-weak';
-        qualityText = 'Bardzo słaby sygnał / na granicy zaniku (S1-S3)';
+        qualityText = isEn ? 'Very weak signal / near drop-off (S1-S3)' : 'Bardzo słaby sygnał / na granicy zaniku (S1-S3)';
         adviceText = isStreet
-          ? `<strong>Sygnał szczątkowy:</strong> Odległość wynosi ${distanceKm.toFixed(1)} km i przekracza zasięg podstawowy (~${R} km). Odbiór może być niestabilny lub okresowo zanikać.`
-          : `<strong>Poza główną strefą pokrycia:</strong> Rejon leży poza nominalnym zasięgiem tego nadajnika (~${R} km). Zalecany wybór innego, bliższego nadajnika.`;
+          ? (isEn
+            ? `<strong>Residual signal:</strong> Distance is ${distanceKm.toFixed(1)} km and exceeds nominal coverage (~${R} km). Reception may be unstable or experience frequent dropouts.`
+            : `<strong>Sygnał szczątkowy:</strong> Odległość wynosi ${distanceKm.toFixed(1)} km i przekracza zasięg podstawowy (~${R} km). Odbiór może być niestabilny lub okresowo zanikać.`)
+          : (isEn
+            ? `<strong>Outside primary coverage:</strong> Area lies outside nominal coverage of this transmitter (~${R} km). Choosing a closer transmitter is advised.`
+            : `<strong>Poza główną strefą pokrycia:</strong> Rejon leży poza nominalnym zasięgiem tego nadajnika (~${R} km). Zalecany wybór innego, bliższego nadajnika.`);
       } else {
         qualityClass = 'signal-none';
-        qualityText = 'Brak sygnału (0% - poza zasięgiem)';
+        qualityText = isEn ? 'No signal (0% - out of range)' : 'Brak sygnału (0% - poza zasięgiem)';
         adviceText = isStreet
-          ? `<strong>Brak sygnału na wybranej ulicy:</strong> Odległość wynosi <strong>${distanceKm.toFixed(1)} km</strong> i znacznie przekracza maksymalny zasięg tego nadajnika (~${R} km). Sygnał z tego obiektu nie dociera. Wybierz bliższy nadajnik obsługujący ten rejon.`
-          : `<strong>Brak zasięgu w wybranej miejscowości:</strong> Odległość wynosi <strong>${distanceKm.toFixed(1)} km</strong>, podczas gdy zasięg nadajnika to ~${R} km (miejsce jest o <strong>${(distanceKm - R).toFixed(1)} km poza strefą pokrycia</strong>). Brak możliwości odbioru tego nadajnika.`;
+          ? (isEn
+            ? `<strong>No signal at selected street:</strong> Distance is <strong>${distanceKm.toFixed(1)} km</strong>, which exceeds the transmitter coverage (~${R} km). No signal reaches this location. Choose a closer transmitter serving this area.`
+            : `<strong>Brak sygnału na wybranej ulicy:</strong> Odległość wynosi <strong>${distanceKm.toFixed(1)} km</strong> i znacznie przekracza maksymalny zasięg tego nadajnika (~${R} km). Sygnał z tego obiektu nie dociera. Wybierz bliższy nadajnik obsługujący ten rejon.`)
+          : (isEn
+            ? `<strong>Out of range in selected town/city:</strong> Distance is <strong>${distanceKm.toFixed(1)} km</strong>, while transmitter coverage is ~${R} km (location is <strong>${(distanceKm - R).toFixed(1)} km outside coverage contour</strong>). Reception from this transmitter is not possible.`
+            : `<strong>Brak zasięgu w wybranej miejscowości:</strong> Odległość wynosi <strong>${distanceKm.toFixed(1)} km</strong>, podczas gdy zasięg nadajnika to ~${R} km (miejsce jest o <strong>${(distanceKm - R).toFixed(1)} km poza strefą pokrycia</strong>). Brak możliwości odbioru tego nadajnika.`);
       }
 
       // Render Results Box
@@ -965,7 +1227,7 @@
 
         <div class="calc-meter">
           <div class="calc-meter-head">
-            <span>Siła i jakość sygnału:</span>
+            <span>${isEn ? 'Signal strength & quality:' : 'Siła i jakość sygnału:'}</span>
             <span class="${qualityClass}" style="font-weight:700;">${percent}% &bull; ${qualityText}</span>
           </div>
           <div class="signal-bar-track">
@@ -975,15 +1237,17 @@
 
         <div class="calc-params-grid">
           <div class="calc-param-box">
-            <div class="calc-param-label">Odległość do nadajnika</div>
+            <div class="calc-param-label">${isEn ? 'Distance to transmitter' : 'Odległość do nadajnika'}</div>
             <div class="calc-param-val">${distanceKm.toFixed(isStreet ? 2 : 1)} km</div>
           </div>
           <div class="calc-param-box">
-            <div class="calc-param-label">Zasięg nadajnika</div>
-            <div class="calc-param-val">~${R} km ${distanceKm > R ? '<span style="color:#ef4444;font-size:11px;">(Poza zasięgiem)</span>' : '<span style="color:#10b981;font-size:11px;">(W zasięgu)</span>'}</div>
+            <div class="calc-param-label">${isEn ? 'Transmitter range' : 'Zasięg nadajnika'}</div>
+            <div class="calc-param-val">~${R} km ${distanceKm > R 
+              ? (isEn ? '<span style="color:#ef4444;font-size:11px;">(Out of range)</span>' : '<span style="color:#ef4444;font-size:11px;">(Poza zasięgiem)</span>') 
+              : (isEn ? '<span style="color:#10b981;font-size:11px;">(In range)</span>' : '<span style="color:#10b981;font-size:11px;">(W zasięgu)</span>')}</div>
           </div>
           <div class="calc-param-box">
-            <div class="calc-param-label">Azymut (Kierunek anteny)</div>
+            <div class="calc-param-label">${isEn ? 'Antenna Azimuth' : 'Azymut (Kierunek anteny)'}</div>
             <div class="calc-param-val">${azimuthDeg.toFixed(0)}&deg; (${compassDir})</div>
           </div>
         </div>
@@ -993,8 +1257,8 @@
         </div>
 
         <div style="display:flex;gap:8px;margin-top:4px;">
-          <button id="calcShowOnMapBtn" class="btn-primary">Pokaż linię zasięgu na mapie</button>
-          <button id="calcCloseBtn" class="btn-secondary">Zamknij kalkulator</button>
+          <button id="calcShowOnMapBtn" class="btn-primary">${isEn ? 'Show signal line on map' : 'Pokaż linię zasięgu na mapie'}</button>
+          <button id="calcCloseBtn" class="btn-secondary">${isEn ? 'Close calculator' : 'Zamknij kalkulator'}</button>
         </div>
       `;
 
@@ -1012,7 +1276,7 @@
 
     } catch (err) {
       els.calcLoading.classList.add('hidden');
-      els.calcResults.innerHTML = `<div style="color:#ef4444;">Błąd połączenia z geokoderem: ${err.message}</div>`;
+      els.calcResults.innerHTML = `<div style="color:#ef4444;">${currentLang === 'en' ? 'Geocoder connection error:' : 'Błąd połączenia z geokoderem:'} ${err.message}</div>`;
       els.calcResults.classList.remove('hidden');
     }
   }
@@ -1020,6 +1284,7 @@
   // Draw measurement line on map
   function drawMeasurementLine(t, targetLat, targetLon, targetName, distKm, percent, azimuthDeg, compassDir) {
     clearMeasurementLine();
+    const isEn = currentLang === 'en';
 
     const R = Math.max(5, t.estimatedRangeKm || 30);
     const inRange = distKm <= R;
@@ -1048,16 +1313,24 @@
       })
     }).addTo(map);
 
+    const qualityLabel = percent === 0 
+      ? (isEn ? 'Out of range' : 'Brak sygnału') 
+      : percent >= 70 
+      ? (isEn ? 'Very strong' : 'Bardzo silny') 
+      : (isEn ? 'Medium' : 'Średni');
+
     targetLocationMarker.bindPopup(`
       <div style="font-size:12px;">
-        <strong style="color:${inRange ? '#38bdf8' : '#ef4444'};font-size:13px;">${inRange ? 'Punkt odbioru (W zasięgu):' : 'Punkt odbioru (Poza zasięgiem):'}</strong>
+        <strong style="color:${inRange ? '#38bdf8' : '#ef4444'};font-size:13px;">${inRange 
+          ? (isEn ? 'Reception point (In range):' : 'Punkt odbioru (W zasięgu):') 
+          : (isEn ? 'Reception point (Out of range):' : 'Punkt odbioru (Poza zasięgiem):')}</strong>
         <div style="margin:2px 0 6px 0;font-weight:600;">${escapeHtml(targetName)}</div>
         <table style="width:100%;font-size:11px;">
-          <tr><td>Nadajnik:</td><td><strong>${escapeHtml(t.name)}</strong></td></tr>
-          <tr><td>Odległość:</td><td><strong>${distKm.toFixed(2)} km</strong></td></tr>
-          <tr><td>Zasięg nadajnika:</td><td><strong>~${R} km</strong></td></tr>
-          <tr><td>Azymut anteny:</td><td><strong>${azimuthDeg.toFixed(0)}° (${compassDir})</strong></td></tr>
-          <tr><td>Szacowany sygnał:</td><td><strong style="color:${percentColor};">${percent}% (${percent === 0 ? 'Brak sygnału' : percent >= 70 ? 'Bardzo silny' : 'Średni'})</strong></td></tr>
+          <tr><td>${isEn ? 'Transmitter:' : 'Nadajnik:'}</td><td><strong>${escapeHtml(t.name)}</strong></td></tr>
+          <tr><td>${isEn ? 'Distance:' : 'Odległość:'}</td><td><strong>${distKm.toFixed(2)} km</strong></td></tr>
+          <tr><td>${isEn ? 'Transmitter range:' : 'Zasięg nadajnika:'}</td><td><strong>~${R} km</strong></td></tr>
+          <tr><td>${isEn ? 'Antenna azimuth:' : 'Azymut anteny:'}</td><td><strong>${azimuthDeg.toFixed(0)}° (${compassDir})</strong></td></tr>
+          <tr><td>${isEn ? 'Estimated signal:' : 'Szacowany sygnał:'}</td><td><strong style="color:${percentColor};">${percent}% (${qualityLabel})</strong></td></tr>
         </table>
       </div>
     `).openPopup();
@@ -1070,7 +1343,7 @@
       [targetLat, targetLon]
     ], { padding: [60, 60] });
 
-    showToast(`Narysowano linię sygnału: ${distKm.toFixed(1)} km, sygnał: ${percent}%`);
+    showToast(isEn ? `Drew signal line: ${distKm.toFixed(1)} km, signal: ${percent}%` : `Narysowano linię sygnału: ${distKm.toFixed(1)} km, sygnał: ${percent}%`);
   }
 
   function clearMeasurementLine() {
@@ -1087,9 +1360,10 @@
 
   // Detail Modal
   async function openDetailModal(t) {
+    const isEn = currentLang === 'en';
     els.modalTitle.textContent = `${t.name} (${t.programOrMux})`;
     els.modalCategoryBadge.className = `badge badge-${t.category}`;
-    els.modalCategoryBadge.textContent = t.categoryLabel;
+    els.modalCategoryBadge.textContent = getCategoryLabel(t.category, currentLang);
 
     const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lon}`;
 
@@ -1098,7 +1372,7 @@
     if (t.channelsList && t.channelsList.length > 0) {
       channelsHtml = `
         <div class="detail-box" style="grid-column: span 2;">
-          <div class="detail-label">Stacje TV nadawane w tym multipleksie (${t.channelsList.length})</div>
+          <div class="detail-label">${isEn ? `TV channels broadcast in this multiplex (${t.channelsList.length})` : `Stacje TV nadawane w tym multipleksie (${t.channelsList.length})`}</div>
           <div class="channels-list-wrap">
             ${t.channelsList.map(c => `<span class="channel-chip">${escapeHtml(c)}</span>`).join('')}
           </div>
@@ -1111,7 +1385,7 @@
     if (t.streamUrl) {
       modalAudioHtml = `
         <button class="btn-success" id="modalPlayAudioBtn" style="margin-bottom:8px;">
-          ▶️ Odsłuchaj na żywo: ${escapeHtml(t.streamName || t.programOrMux)}
+          ▶️ ${isEn ? 'Listen live:' : 'Odsłuchaj na żywo:'} ${escapeHtml(t.streamName || t.programOrMux)}
         </button>
       `;
     }
@@ -1122,7 +1396,7 @@
     if (sameSiteTransmitters.length > 0) {
       sameSiteHtml = `
         <div class="site-broadcasts-box" style="grid-column: span 2;">
-          <div class="detail-label">Inne emisje z tego masztu / obiektu (${sameSiteTransmitters.length})</div>
+          <div class="detail-label">${isEn ? `Other broadcasts from this mast / site (${sameSiteTransmitters.length})` : `Inne emisje z tego masztu / obiektu (${sameSiteTransmitters.length})`}</div>
           <div class="site-broadcasts-list">
             ${sameSiteTransmitters.map(s => `
               <div class="site-item" data-id="${s.id}">
@@ -1138,76 +1412,88 @@
       `;
     }
 
+    const polText = t.polarization === 'H' 
+      ? (isEn ? 'Horizontal (H)' : 'Pozioma (H)') 
+      : t.polarization === 'V' 
+      ? (isEn ? 'Vertical (V)' : 'Pionowa (V)') 
+      : t.polarization;
+      
+    const charText = t.radiationPattern === 'ND' 
+      ? (isEn ? 'Omnidirectional (ND)' : 'Dookólna (ND)') 
+      : (isEn ? 'Directional (D)' : 'Kierunkowa (D)');
+
     els.modalBody.innerHTML = `
       ${modalAudioHtml}
 
       <div class="detail-grid">
         <div class="detail-box">
-          <div class="detail-label">Kto nadaje (Nadawca / Wnioskodawca)</div>
+          <div class="detail-label">${isEn ? 'Broadcaster / Applicant' : 'Kto nadaje (Nadawca / Wnioskodawca)'}</div>
           <div class="detail-value" style="color:#38bdf8;">${escapeHtml(t.broadcaster)}</div>
         </div>
         <div class="detail-box">
-          <div class="detail-label">Co nadaje (Program / MUX)</div>
+          <div class="detail-label">${isEn ? 'Program / Multiplex' : 'Co nadaje (Program / MUX)'}</div>
           <div class="detail-value" style="color:#4ade80;">${escapeHtml(t.programOrMux)}</div>
         </div>
 
         ${channelsHtml}
 
         <div class="detail-box">
-          <div class="detail-label">System emisji</div>
+          <div class="detail-label">${isEn ? 'Broadcast standard' : 'System emisji'}</div>
           <div class="detail-value">${escapeHtml(t.system)}</div>
         </div>
         <div class="detail-box">
-          <div class="detail-label">Częstotliwość</div>
-          <div class="detail-value">${t.frequency} ${t.frequencyUnit} ${t.channel ? `(kanał ${t.channel})` : ''}</div>
+          <div class="detail-label">${isEn ? 'Frequency' : 'Częstotliwość'}</div>
+          <div class="detail-value">${t.frequency} ${t.frequencyUnit} ${t.channel ? `(${isEn ? 'channel' : 'kanał'} ${t.channel})` : ''}</div>
         </div>
         <div class="detail-box">
-          <div class="detail-label">Moc ERP</div>
+          <div class="detail-label">${isEn ? 'ERP Power' : 'Moc ERP'}</div>
           <div class="detail-value">${t.powerKw} kW (${t.powerDbw} dBW)</div>
         </div>
         <div class="detail-box">
-          <div class="detail-label">Wysokość anteny</div>
-          <div class="detail-value">${t.heightAgl} m n.p.t. (${t.heightAmsl} m n.p.m.)</div>
+          <div class="detail-label">${isEn ? 'Antenna height' : 'Wysokość anteny'}</div>
+          <div class="detail-value">${t.heightAgl} m ${isEn ? 'AGL' : 'n.p.t.'} (${t.heightAmsl} m ${isEn ? 'AMSL' : 'n.p.m.'})</div>
         </div>
         <div class="detail-box">
-          <div class="detail-label">Polaryzacja</div>
-          <div class="detail-value">${t.polarization === 'H' ? 'Pozioma (H)' : t.polarization === 'V' ? 'Pionowa (V)' : t.polarization}</div>
+          <div class="detail-label">${isEn ? 'Polarization' : 'Polaryzacja'}</div>
+          <div class="detail-value">${polText}</div>
         </div>
         <div class="detail-box">
-          <div class="detail-label">Charakterystyka</div>
-          <div class="detail-value">${t.radiationPattern === 'ND' ? 'Dookólna (ND)' : 'Kierunkowa (D)'}</div>
+          <div class="detail-label">${isEn ? 'Radiation pattern' : 'Charakterystyka'}</div>
+          <div class="detail-value">${charText}</div>
         </div>
         <div class="detail-box">
-          <div class="detail-label">Współrzędne (WGS84)</div>
+          <div class="detail-label">${isEn ? 'Coordinates (WGS84)' : 'Współrzędne (WGS84)'}</div>
           <div class="detail-value">${t.lat}&deg; N, ${t.lon}&deg; E</div>
         </div>
         <div class="detail-box">
-          <div class="detail-label">Szacowany promień zasięgu</div>
+          <div class="detail-label">${isEn ? 'Estimated coverage radius' : 'Szacowany promień zasięgu'}</div>
           <div class="detail-value">~${t.estimatedRangeKm} km</div>
         </div>
         <div class="detail-box" style="grid-column: span 2;">
-          <div class="detail-label">Lokalizacja / Obiekt</div>
+          <div class="detail-label">${isEn ? 'Location / Site' : 'Lokalizacja / Obiekt'}</div>
           <div class="detail-value">${escapeHtml(t.location || '-')} (${t.voivodeship})</div>
         </div>
 
         ${sameSiteHtml}
 
         <div class="detail-box">
-          <div class="detail-label">Status pozwolenia UKE</div>
+          <div class="detail-label">${isEn ? 'UKE permit status' : 'Status pozwolenia UKE'}</div>
           <div class="detail-value">${escapeHtml(t.status)}</div>
         </div>
         <div class="detail-box">
-          <div class="detail-label">Ważność pozwolenia</div>
-          <div class="detail-value">${escapeHtml(t.validTo || 'Brak danych')}</div>
+          <div class="detail-label">${isEn ? 'Permit validity' : 'Ważność pozwolenia'}</div>
+          <div class="detail-value">${escapeHtml(t.validTo || (isEn ? 'No data' : 'Brak danych'))}</div>
         </div>
       </div>
 
       <div class="modal-actions">
-        <button class="btn-primary" id="modalCalcSignalBtn">📐 Oblicz sygnał w lokalizacji</button>
+        <button class="btn-primary" id="modalCalcSignalBtn">${isEn ? '📐 Calculate signal at location' : '📐 Oblicz sygnał w lokalizacji'}</button>
         <button class="btn-secondary" id="modalToggleCoverageBtn">
-          ${activeCoverageCircles.has(t.id) ? '❌ Wyłącz obręb' : '📡 Włącz obręb zasięgu'}
+          ${activeCoverageCircles.has(t.id) 
+            ? (isEn ? '❌ Disable coverage' : '❌ Wyłącz obręb') 
+            : (isEn ? '📡 Enable coverage circle' : '📡 Włącz obręb zasięgu')}
         </button>
-        <a class="btn-secondary" href="${gmapsUrl}" target="_blank" rel="noopener noreferrer">Nawiguj (Google Maps)</a>
+        <a class="btn-secondary" href="${gmapsUrl}" target="_blank" rel="noopener noreferrer">${isEn ? 'Navigate (Google Maps)' : 'Nawiguj (Google Maps)'}</a>
       </div>
     `;
 
@@ -1230,7 +1516,9 @@
     modalCovBtn.onclick = () => {
       toggleCoverageCircle(t);
       const isNowActive = activeCoverageCircles.has(t.id);
-      modalCovBtn.textContent = isNowActive ? '❌ Wyłącz obręb' : '📡 Włącz obręb zasięgu';
+      modalCovBtn.textContent = isNowActive 
+        ? (isEn ? '❌ Disable coverage' : '❌ Wyłącz obręb') 
+        : (isEn ? '📡 Enable coverage circle' : '📡 Włącz obręb zasięgu');
       modalCovBtn.className = isNowActive ? 'btn-danger' : 'btn-secondary';
     };
 
@@ -1355,6 +1643,14 @@
 
   // Event Listeners Setup
   function setupEvents() {
+    // Language switcher buttons
+    if (els.langPlBtn) {
+      els.langPlBtn.addEventListener('click', () => setLanguage('pl'));
+    }
+    if (els.langEnBtn) {
+      els.langEnBtn.addEventListener('click', () => setLanguage('en'));
+    }
+
     // Category pill toggles
     [els.catTv, els.catFm, els.catDab, els.catAm].forEach(checkbox => {
       checkbox.addEventListener('change', () => {
@@ -1643,11 +1939,15 @@
     return bearing;
   }
 
-  function getCompassDirection(bearing) {
-    const directions = ['N (Północ)', 'NNE', 'NE', 'ENE', 'E (Wschód)', 'ESE', 'SE', 'SSE',
-                        'S (Południe)', 'SSW', 'SW', 'WSW', 'W (Zachód)', 'WNW', 'NW', 'NNW'];
+  function getCompassDirection(bearing, lang = currentLang) {
+    const isEn = lang === 'en';
+    const directionsPl = ['N (Północ)', 'NNE', 'NE', 'ENE', 'E (Wschód)', 'ESE', 'SE', 'SSE',
+                          'S (Południe)', 'SSW', 'SW', 'WSW', 'W (Zachód)', 'WNW', 'NW', 'NNW'];
+    const directionsEn = ['N (North)', 'NNE', 'NE', 'ENE', 'E (East)', 'ESE', 'SE', 'SSE',
+                          'S (South)', 'SSW', 'SW', 'WSW', 'W (West)', 'WNW', 'NW', 'NNW'];
+    const dirs = isEn ? directionsEn : directionsPl;
     const idx = Math.round(bearing / 22.5) % 16;
-    return directions[idx];
+    return dirs[idx];
   }
 
   // HTML Escape helper

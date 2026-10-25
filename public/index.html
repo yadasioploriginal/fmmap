@@ -40,8 +40,8 @@
             </svg>
           </div>
           <div class="logo-text">
-            <h1>Nadajniki PL</h1>
-            <span class="logo-sub">DVB-T/T2 &bull; FM &bull; DAB+ &bull; AM</span>
+            <h1 data-i18n="appName">Nadajniki PL</h1>
+            <span class="logo-sub" data-i18n="appSub">DVB-T/T2 &bull; FM &bull; DAB+ &bull; AM</span>
           </div>
         </div>
       </div>
@@ -51,25 +51,25 @@
         <label class="pill pill-tv active" data-category="tv">
           <input type="checkbox" id="cat-tv" checked>
           <span class="pill-dot"></span>
-          <span class="pill-name">Telewizja DVB-T/T2</span>
+          <span class="pill-name" data-i18n="tvPill">Telewizja DVB-T/T2</span>
           <span class="pill-count" id="count-tv">...</span>
         </label>
         <label class="pill pill-fm active" data-category="fm">
           <input type="checkbox" id="cat-fm" checked>
           <span class="pill-dot"></span>
-          <span class="pill-name">Radio FM</span>
+          <span class="pill-name" data-i18n="fmPill">Radio FM</span>
           <span class="pill-count" id="count-fm">...</span>
         </label>
         <label class="pill pill-dab active" data-category="dab">
           <input type="checkbox" id="cat-dab" checked>
           <span class="pill-dot"></span>
-          <span class="pill-name">DAB+</span>
+          <span class="pill-name" data-i18n="dabPill">DAB+</span>
           <span class="pill-count" id="count-dab">...</span>
         </label>
         <label class="pill pill-am active" data-category="am">
           <input type="checkbox" id="cat-am" checked>
           <span class="pill-dot"></span>
-          <span class="pill-name">AM (MW/LW)</span>
+          <span class="pill-name" data-i18n="amPill">AM (MW/LW)</span>
           <span class="pill-count" id="count-am">...</span>
         </label>
       </div>
@@ -80,7 +80,7 @@
           <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
             <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
           </svg>
-          <input type="text" id="searchInput" placeholder="Szukaj stacji, miasta, MUX, częstotliwości..." autocomplete="off">
+          <input type="text" id="searchInput" placeholder="Szukaj stacji, miasta, MUX, częstotliwości..." data-i18n-ph="searchPlaceholder" autocomplete="off">
           <button id="clearSearchBtn" class="clear-btn" title="Wyczyść">&times;</button>
         </div>
 
@@ -88,29 +88,35 @@
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
             <path d="M12 3v9.28a4.39 4.39 0 00-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/>
           </svg>
-          <span class="btn-text">Odsłuch radia</span>
+          <span class="btn-text" data-i18n="radioListenBtn">Odsłuch radia</span>
         </button>
 
         <button id="locateBtn" class="action-btn" title="Pokaż moją lokalizację">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
             <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
           </svg>
-          <span class="btn-text">Lokalizacja</span>
+          <span class="btn-text" data-i18n="locateBtn">Lokalizacja</span>
         </button>
 
         <button id="toggleCoverageBtn" class="action-btn" title="Przełącz wszystkie szacowane promienie zasięgu">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/>
           </svg>
-          <span class="btn-text">Wszystkie zasięgi</span>
+          <span class="btn-text" data-i18n="allCoverageBtn">Wszystkie zasięgi</span>
         </button>
 
         <button id="toggleListViewBtn" class="action-btn" title="Przełącz widok listy">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
             <path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/>
           </svg>
-          <span class="btn-text">Lista</span>
+          <span class="btn-text" data-i18n="listViewBtn">Lista</span>
         </button>
+
+        <!-- Language Switcher -->
+        <div class="lang-switcher" id="langSwitcher" title="Wybierz język / Choose language">
+          <button id="langPlBtn" class="lang-btn active" data-lang="pl" title="Język polski">PL</button>
+          <button id="langEnBtn" class="lang-btn" data-lang="en" title="English language">EN</button>
+        </div>
       </div>
     </header>
 
@@ -118,34 +124,34 @@
       <!-- Sidebar Filters & Tools -->
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-          <h3>Filtry i parametry</h3>
-          <button id="resetFiltersBtn" class="text-btn">Resetuj</button>
+          <h3 data-i18n="filtersTitle">Filtry i parametry</h3>
+          <button id="resetFiltersBtn" class="text-btn" data-i18n="resetBtn">Resetuj</button>
         </div>
 
         <div class="sidebar-body">
           <!-- Voivodeship Filter -->
           <div class="filter-group">
-            <label for="voivodeshipSelect">Województwo</label>
+            <label for="voivodeshipSelect" data-i18n="voivodeshipLabel">Województwo</label>
             <select id="voivodeshipSelect" class="form-select">
-              <option value="ALL">Wszystkie województwa</option>
+              <option value="ALL" data-i18n="allVoivodeships">Wszystkie województwa</option>
             </select>
           </div>
 
           <!-- TV Multiplex Filter -->
           <div class="filter-group" id="muxFilterGroup">
-            <label for="muxSelect">Multipleks TV</label>
+            <label for="muxSelect" data-i18n="muxLabel">Multipleks TV</label>
             <select id="muxSelect" class="form-select">
-              <option value="ALL">Wszystkie multipleksy</option>
+              <option value="ALL" data-i18n="allMuxes">Wszystkie multipleksy</option>
             </select>
           </div>
 
           <!-- TV System Filter -->
           <div class="filter-group" id="systemFilterGroup">
-            <label for="systemSelect">Standard emisji TV</label>
+            <label for="systemSelect" data-i18n="systemLabel">Standard emisji TV</label>
             <select id="systemSelect" class="form-select">
-              <option value="ALL">Wszystkie standardy</option>
-              <option value="DVB-T2">Tylko DVB-T2</option>
-              <option value="DVB-T">Tylko DVB-T</option>
+              <option value="ALL" data-i18n="allSystems">Wszystkie standardy</option>
+              <option value="DVB-T2" data-i18n="onlyDvbT2">Tylko DVB-T2</option>
+              <option value="DVB-T" data-i18n="onlyDvbT">Tylko DVB-T</option>
               <option value="5G Broadcast">5G Broadcast</option>
             </select>
           </div>
@@ -153,11 +159,11 @@
           <!-- Min Power Filter -->
           <div class="filter-group">
             <div class="filter-label-row">
-              <label for="powerRange">Min. moc ERP: <span id="powerValue">0 kW</span></label>
+              <label for="powerRange"><span data-i18n="minPowerLabel">Min. moc ERP:</span> <span id="powerValue">0 kW</span></label>
             </div>
             <input type="range" id="powerRange" min="0" max="100" step="1" value="0" class="form-range">
             <div class="range-presets">
-              <button class="preset-btn active" data-power="0">Wszystkie</button>
+              <button class="preset-btn active" data-power="0" data-i18n="allPower">Wszystkie</button>
               <button class="preset-btn" data-power="1">≥ 1 kW</button>
               <button class="preset-btn" data-power="10">≥ 10 kW</button>
               <button class="preset-btn" data-power="50">≥ 50 kW</button>
@@ -166,53 +172,53 @@
 
           <!-- Polarization Filter -->
           <div class="filter-group">
-            <label>Polaryzacja anteny</label>
+            <label data-i18n="polarizationLabel">Polaryzacja anteny</label>
             <div class="segmented-control">
-              <button class="seg-btn active" data-pol="ALL">Wszystkie</button>
-              <button class="seg-btn" data-pol="H">Pozioma (H)</button>
-              <button class="seg-btn" data-pol="V">Pionowa (V)</button>
+              <button class="seg-btn active" data-pol="ALL" data-i18n="allPol">Wszystkie</button>
+              <button class="seg-btn" data-pol="H" data-i18n="horizontalPol">Pozioma (H)</button>
+              <button class="seg-btn" data-pol="V" data-i18n="verticalPol">Pionowa (V)</button>
             </div>
           </div>
 
           <!-- Quick Stats Panel -->
           <div class="stats-card">
-            <h4>Statystyki zestawienia</h4>
+            <h4 data-i18n="statsTitle">Statystyki zestawienia</h4>
             <div class="stat-row">
-              <span>Widocznych obiektów:</span>
+              <span data-i18n="statVisible">Widocznych obiektów:</span>
               <strong id="statVisible">0</strong>
             </div>
             <div class="stat-row">
-              <span>Wszystkich w bazie:</span>
+              <span data-i18n="statTotal">Wszystkich w bazie:</span>
               <span id="statTotal">0</span>
             </div>
             <div class="stat-row">
-              <span>Średnia moc ERP:</span>
+              <span data-i18n="statAvgPower">Średnia moc ERP:</span>
               <span id="statAvgPower">0 kW</span>
             </div>
             <div class="stat-row">
-              <span>Najsilniejszy nadajnik:</span>
+              <span data-i18n="statMaxPower">Najsilniejszy nadajnik:</span>
               <span id="statMaxPower">...</span>
             </div>
           </div>
 
           <!-- Legend -->
           <div class="legend-card">
-            <h4>Legenda mapy</h4>
+            <h4 data-i18n="legendTitle">Legenda mapy</h4>
             <div class="legend-item">
               <span class="legend-icon icon-tv"></span>
-              <span>Telewizja (DVB-T / DVB-T2)</span>
+              <span data-i18n="legendTv">Telewizja (DVB-T / DVB-T2)</span>
             </div>
             <div class="legend-item">
               <span class="legend-icon icon-fm"></span>
-              <span>Radio FM (UKF)</span>
+              <span data-i18n="legendFm">Radio FM (UKF)</span>
             </div>
             <div class="legend-item">
               <span class="legend-icon icon-dab"></span>
-              <span>Radio cyfrowe (DAB+)</span>
+              <span data-i18n="legendDab">Radio cyfrowe (DAB+)</span>
             </div>
             <div class="legend-item">
               <span class="legend-icon icon-am"></span>
-              <span>Radio AM (Solec Kujawski, MW)</span>
+              <span data-i18n="legendAm">Radio AM (Solec Kujawski, MW)</span>
             </div>
           </div>
 
@@ -232,13 +238,13 @@
         <!-- Floating Quick Clear Coverage Button (Appears when any circle is active) -->
         <button id="clearCoverageFloatingBtn" class="floating-coverage-btn hidden" title="Wyłącz wszystkie aktywne obręby nadawania">
           <span class="btn-icon">🚫</span>
-          <span class="btn-text">Wyłącz obręb nadawania (<span id="activeCirclesBadge">0</span>)</span>
+          <span class="btn-text"><span data-i18n="clearCoverageFloating">Wyłącz obręb nadawania</span> (<span id="activeCirclesBadge">0</span>)</span>
         </button>
 
         <!-- Floating Clear Calculator Measurement Line -->
         <button id="clearMeasureLineBtn" class="floating-measure-btn hidden" title="Usuń linię pomiaru sygnału z mapy">
           <span class="btn-icon">❌</span>
-          <span class="btn-text">Usuń linię pomiaru</span>
+          <span class="btn-text" data-i18n="clearMeasureLine">Usuń linię pomiaru</span>
         </button>
 
         <!-- Float Notification / Message -->
@@ -248,7 +254,7 @@
       <!-- Sliding List Drawer (Optional View) -->
       <section class="list-drawer hidden" id="listDrawer">
         <div class="list-drawer-header">
-          <h3>Lista dopasowanych nadajników (<span id="listCount">0</span>)</h3>
+          <h3><span data-i18n="matchedTransmitters">Lista dopasowanych nadajników</span> (<span id="listCount">0</span>)</h3>
           <button id="closeListBtn" class="close-btn">&times;</button>
         </div>
         <div class="list-drawer-body" id="listContent">
@@ -259,11 +265,11 @@
       <!-- Sliding Radio Streams Drawer -->
       <section class="list-drawer hidden" id="radioDrawer">
         <div class="list-drawer-header">
-          <h3>📻 Stacje radiowe na żywo (<span id="radioStreamsCount">0</span>)</h3>
+          <h3><span data-i18n="liveRadioTitle">📻 Stacje radiowe na żywo</span> (<span id="radioStreamsCount">0</span>)</h3>
           <button id="closeRadioDrawerBtn" class="close-btn">&times;</button>
         </div>
         <div class="radio-drawer-search">
-          <input type="text" id="radioFilterInput" placeholder="Szukaj stacji do odsłuchu...">
+          <input type="text" id="radioFilterInput" placeholder="Szukaj stacji do odsłuchu..." data-i18n-ph="searchRadioPlaceholder">
         </div>
         <div class="list-drawer-body" id="radioStreamsList">
           <!-- Dynamically populated -->
@@ -282,8 +288,8 @@
         </div>
         <div class="audio-info">
           <div class="audio-info-row">
-            <span class="live-pill">NA ŻYWO</span>
-            <span class="rds-pill hidden" id="audioRdsPill" title="Radio Data System - aktualnie na antenie">
+            <span class="live-pill" data-i18n="liveBadge">NA ŻYWO</span>
+            <span class="rds-pill hidden" id="audioRdsPill" title="Radio Data System">
               <span class="rds-dot"></span>
               <span class="rds-text" id="audioRdsText">RDS: Pobieranie...</span>
             </span>
@@ -327,8 +333,8 @@
       <div class="modal-card calc-card">
         <div class="modal-header">
           <div class="modal-title-wrap">
-            <span class="badge" style="background:#0284c7;color:#fff;">Kalkulator Sygnału</span>
-            <h2 id="calcTransmitterTitle">Obliczanie zasięgu nadajnika</h2>
+            <span class="badge" style="background:#0284c7;color:#fff;" data-i18n="calcModalTitle">Kalkulator Sygnału</span>
+            <h2 id="calcTransmitterTitle" data-i18n="calcHeading">Obliczanie zasięgu nadajnika</h2>
           </div>
           <button id="closeCalcModalBtn" class="close-btn">&times;</button>
         </div>
@@ -338,17 +344,17 @@
           </div>
 
           <div class="calc-input-section">
-            <label for="calcLocationInput"><strong>Wpisz miasto, gminę lub ulicę:</strong></label>
+            <label for="calcLocationInput"><strong data-i18n="calcLocationLabel">Wpisz miasto, gminę lub ulicę:</strong></label>
             <div class="calc-search-row">
-              <input type="text" id="calcLocationInput" placeholder="np. Radom, gmina Piaseczno, Warszawa Marszałkowska 10..." autocomplete="off">
-              <button id="calcSubmitBtn" class="btn-primary" style="flex:0 0 auto;padding:8px 16px;">Oblicz sygnał</button>
+              <input type="text" id="calcLocationInput" placeholder="np. Radom, gmina Piaseczno, Warszawa Marszałkowska 10..." data-i18n-ph="calcLocationPlaceholder" autocomplete="off">
+              <button id="calcSubmitBtn" class="btn-primary" style="flex:0 0 auto;padding:8px 16px;" data-i18n="calcSubmit">Oblicz sygnał</button>
             </div>
-            <span class="calc-hint">Wpisz nazwę miejscowości lub gminy (dla szacunku ogólnego) albo dokładną ulicę (dla precyzyjnego wyliczenia sygnału).</span>
+            <span class="calc-hint" data-i18n="calcHint">Wpisz nazwę miejscowości lub gminy (dla szacunku ogólnego) albo dokładną ulicę (dla precyzyjnego wyliczenia sygnału).</span>
           </div>
 
           <div id="calcLoading" class="calc-loading hidden">
             <div class="spinner"></div>
-            <span>Wyszukiwanie lokalizacji i obliczanie propagacji fal radiowych...</span>
+            <span data-i18n="calcLoadingText">Wyszukiwanie lokalizacji i obliczanie propagacji fal radiowych...</span>
           </div>
 
           <div id="calcResults" class="calc-results hidden">

@@ -246,6 +246,41 @@ body {
   gap: 10px;
 }
 
+/* Language Switcher */
+.lang-switcher {
+  display: flex;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.lang-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.lang-btn:hover:not(.active) {
+  color: #fff;
+  background: var(--bg-tertiary);
+}
+
+.lang-btn.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.4);
+}
+
 .search-box {
   position: relative;
   display: flex;
