@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import { exec } from 'child_process';
 import { AppConfig, Transmitter } from './types.js';
 import { getOrBuildTransmitterCache } from './data-parser.js';
 
@@ -26,6 +27,67 @@ console.log(`Loaded ${transmitters.length} transmitters into memory.`);
 
 // Geocoding memory cache
 const geocodeCache = new Map<string, any>();
+
+// RDS stream metadata memory cache (cache for 8 seconds to prevent excessive process spawning)
+interface RdsCacheItem {
+  title: string;
+  station?: string;
+  bitrate?: string;
+  genre?: string;
+  cachedAt: number;
+}
+const rdsCache = new Map<string, RdsCacheItem>();
+
+function fetchRdsFromStream(url: string, timeoutMs = 3500): Promise<RdsCacheItem> {
+  return new Promise((resolve) => {
+    const cmd = `ffprobe -v quiet -print_format json -show_entries format_tags -show_entries format=bit_rate,format_name "${url}"`;
+    exec(cmd, { timeout: timeoutMs }, (err, stdout) => {
+      if (err || !stdout) {
+        return resolve({ title: '', cachedAt: Date.now() });
+      }
+      try {
+        const data = JSON.parse(stdout);
+        const tags = data.format?.tags || {};
+        let title = tags.StreamTitle || tags.title || tags['icy-name'] || '';
+        title = title.replace(/^\uFEFF/, '').trim();
+        const station = tags['icy-name'] || tags.service_name || '';
+        const genre = tags['icy-genre'] || '';
+        const bitrate = tags['icy-br'] || (data.format?.bit_rate ? Math.round(data.format.bit_rate / 1000) + ' kbps' : '');
+        resolve({
+          title: title || station || 'Audycja na żywo',
+          station: station ? station.trim() : undefined,
+          genre: genre ? genre.trim() : undefined,
+          bitrate: bitrate ? bitrate.trim() : undefined,
+          cachedAt: Date.now()
+        });
+      } catch {
+        resolve({ title: '', cachedAt: Date.now() });
+      }
+    });
+  });
+}
+
+// API: Get live RDS / ICY metadata for a radio stream
+app.get('/api/rds', async (req: Request, res: Response) => {
+  try {
+    const streamUrl = req.query.url as string;
+    if (!streamUrl || streamUrl.trim().length === 0) {
+      return res.status(400).json({ error: 'Brak parametru url' });
+    }
+    const cleanUrl = streamUrl.trim();
+    const cached = rdsCache.get(cleanUrl);
+    const now = Date.now();
+    if (cached && (now - cached.cachedAt) < 8000) {
+      return res.json(cached);
+    }
+
+    const rds = await fetchRdsFromStream(cleanUrl);
+    rdsCache.set(cleanUrl, rds);
+    res.json(rds);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // API: Get current config (safe for frontend)
 app.get('/api/config', (_req: Request, res: Response) => {

@@ -867,6 +867,46 @@ body {
 .audio-info {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+}
+
+.audio-info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rds-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: #34d399;
+  padding: 1px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rds-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  animation: pulseRds 1.5s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulseRds {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
 }
 
 .live-pill {

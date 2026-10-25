@@ -36,6 +36,7 @@
 
   // Audio state
   let currentAudioStream = null;
+  let rdsPollingInterval = null;
 
   // DOM elements
   const els = {
@@ -83,6 +84,8 @@
     nativeAudioPlayer: document.getElementById('nativeAudioPlayer'),
     audioStationName: document.getElementById('audioStationName'),
     audioStationDetails: document.getElementById('audioStationDetails'),
+    audioRdsPill: document.getElementById('audioRdsPill'),
+    audioRdsText: document.getElementById('audioRdsText'),
     audioPlayPauseBtn: document.getElementById('audioPlayPauseBtn'),
     audioStopBtn: document.getElementById('audioStopBtn'),
     audioVolume: document.getElementById('audioVolume'),
@@ -290,6 +293,25 @@
     });
   }
 
+  // Fetch live RDS from backend for active stream
+  async function fetchRdsForActiveStream() {
+    if (!currentAudioStream || !currentAudioStream.url) return;
+    const url = currentAudioStream.url;
+    try {
+      const res = await fetch(`/api/rds?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+      if (data && currentAudioStream && currentAudioStream.url === url) {
+        if (data.title && data.title !== 'Brak danych RDS') {
+          els.audioRdsText.textContent = `RDS: ${data.title}`;
+          els.audioRdsPill.classList.remove('hidden');
+        } else if (data.station) {
+          els.audioRdsText.textContent = `RDS: ${data.station}`;
+          els.audioRdsPill.classList.remove('hidden');
+        }
+      }
+    } catch {}
+  }
+
   // Audio Playback
   function playAudioStream(name, url, details = '') {
     if (!url) {
@@ -297,9 +319,16 @@
       return;
     }
 
+    if (rdsPollingInterval) {
+      clearInterval(rdsPollingInterval);
+      rdsPollingInterval = null;
+    }
+
     currentAudioStream = { name, url, details };
     els.audioStationName.textContent = name;
     els.audioStationDetails.textContent = details;
+    els.audioRdsPill.classList.add('hidden');
+    els.audioRdsText.textContent = 'RDS: Pobieranie...';
 
     els.nativeAudioPlayer.src = url;
     els.nativeAudioPlayer.play().then(() => {
@@ -307,6 +336,10 @@
       els.globalAudioBar.classList.add('playing');
       els.audioPlayPauseBtn.textContent = '⏸';
       showToast(`Odtwarzanie stacji: ${name}`);
+
+      // Fetch RDS immediately and poll every 10 seconds
+      fetchRdsForActiveStream();
+      rdsPollingInterval = setInterval(fetchRdsForActiveStream, 10000);
     }).catch(err => {
       console.error('Audio play error:', err);
       showToast(`Błąd odtwarzania strumienia (${name}): ${err.message}`);
@@ -318,18 +351,31 @@
       els.nativeAudioPlayer.play();
       els.audioPlayPauseBtn.textContent = '⏸';
       els.globalAudioBar.classList.add('playing');
+      fetchRdsForActiveStream();
+      if (!rdsPollingInterval) {
+        rdsPollingInterval = setInterval(fetchRdsForActiveStream, 10000);
+      }
     } else {
       els.nativeAudioPlayer.pause();
       els.audioPlayPauseBtn.textContent = '▶';
       els.globalAudioBar.classList.remove('playing');
+      if (rdsPollingInterval) {
+        clearInterval(rdsPollingInterval);
+        rdsPollingInterval = null;
+      }
     }
   }
 
   function stopAudio() {
+    if (rdsPollingInterval) {
+      clearInterval(rdsPollingInterval);
+      rdsPollingInterval = null;
+    }
     els.nativeAudioPlayer.pause();
     els.nativeAudioPlayer.src = '';
     els.globalAudioBar.classList.remove('playing');
     els.globalAudioBar.classList.add('hidden');
+    els.audioRdsPill.classList.add('hidden');
     currentAudioStream = null;
   }
 
