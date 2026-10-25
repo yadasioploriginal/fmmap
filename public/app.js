@@ -209,6 +209,9 @@
     radioStreamsList: document.getElementById('radioStreamsList'),
     radioStreamsCount: document.getElementById('radioStreamsCount'),
     globalAudioBar: document.getElementById('globalAudioBar'),
+    audioStationLogoBox: document.getElementById('audioStationLogoBox'),
+    audioStationLogoImg: document.getElementById('audioStationLogoImg'),
+    audioStationLogoFallback: document.getElementById('audioStationLogoFallback'),
     nativeAudioPlayer: document.getElementById('nativeAudioPlayer'),
     audioStationName: document.getElementById('audioStationName'),
     audioStationDetails: document.getElementById('audioStationDetails'),
@@ -500,17 +503,68 @@
     }
   }
 
-  // Render Radio Streams in Drawer
+  // Station Logo Matcher (matches the 12 logos in /public/img/stacje)
+  function getStationLogo(name, extra = '') {
+    const combined = `${name || ''} ${extra || ''}`.toLowerCase();
+    const n = stripDiacritics(combined);
+
+    if (n.includes('rmf')) return '/img/stacje/rmffm.png';
+    if (n.includes('zet') && !n.includes('gazeta')) return '/img/stacje/radiozet.png';
+    if (n.includes('eska')) return '/img/stacje/radioeska.png';
+    if (n.includes('zlote') || n.includes('przeboje')) return '/img/stacje/radiozloteprzeboje.png';
+    if (n.includes('jedynka') || (n.includes('program 1') && !n.includes('tvp')) || /\bpr\s*1\b/.test(n) || /\bpolskie radio 1\b/.test(n)) {
+      return '/img/stacje/jedynka.png';
+    }
+    if (n.includes('dwojka') || (n.includes('program 2') && !n.includes('tvp')) || /\bpr\s*2\b/.test(n) || /\bpolskie radio 2\b/.test(n)) {
+      return '/img/stacje/dwojka.png';
+    }
+    if (n.includes('trojka') || (n.includes('program 3') && !n.includes('tvp')) || /\bpr\s*3\b/.test(n) || /\bpolskie radio 3\b/.test(n)) {
+      return '/img/stacje/trojka.png';
+    }
+    if (n.includes('katowic')) return '/img/stacje/pr-katowice.png';
+    if (n.includes('krakow')) return '/img/stacje/pr-krakow.png';
+    if (n.includes('opol')) return '/img/stacje/pr-opole.png';
+    if (n.includes('poznan') || n.includes('merkury')) return '/img/stacje/pr-poznan.png';
+    if (n.includes('zachod')) return '/img/stacje/pr-zachod.png';
+    return null;
+  }
+
+  // Update Station Logo in Audio Player
+  function updateAudioStationLogo(name, details = '') {
+    const logoUrl = getStationLogo(name, details);
+    if (els.audioStationLogoImg && els.audioStationLogoFallback) {
+      if (logoUrl) {
+        els.audioStationLogoImg.src = logoUrl;
+        els.audioStationLogoImg.alt = name;
+        els.audioStationLogoImg.classList.remove('hidden');
+        els.audioStationLogoFallback.classList.add('hidden');
+      } else {
+        els.audioStationLogoImg.src = '';
+        els.audioStationLogoImg.classList.add('hidden');
+        els.audioStationLogoFallback.classList.remove('hidden');
+      }
+    }
+  }
+
+  // Render Radio Streams in Drawer with logos
   function renderRadioStreamsList(streams) {
     els.radioStreamsList.innerHTML = '';
     const isEn = currentLang === 'en';
     streams.forEach(s => {
       const div = document.createElement('div');
       div.className = 'radio-stream-item';
+      const logoUrl = getStationLogo(s.name);
+      const logoHtml = logoUrl
+        ? `<div class="radio-stream-logo-box"><img class="radio-stream-logo-img" src="${logoUrl}" alt="${escapeHtml(s.name)}" /></div>`
+        : `<div class="radio-stream-logo-box"><span class="radio-stream-logo-fallback">📻</span></div>`;
+
       div.innerHTML = `
-        <div class="radio-stream-info">
-          <strong>${escapeHtml(s.name)}</strong>
-          <span>${isEn ? 'Live streaming • MP3/AAC' : 'Odsłuch na żywo • MP3/AAC'}</span>
+        <div class="radio-stream-left">
+          ${logoHtml}
+          <div class="radio-stream-info">
+            <strong>${escapeHtml(s.name)}</strong>
+            <span>${isEn ? 'Live streaming • MP3/AAC' : 'Odsłuch na żywo • MP3/AAC'}</span>
+          </div>
         </div>
         <button class="radio-play-btn" title="${isEn ? 'Play station' : 'Odtwórz stację'}">▶</button>
       `;
@@ -523,11 +577,50 @@
     });
   }
 
+  // Live RDS state
+  let isRdsFetching = false;
+  let rdsPollTimer = null;
+  let lastRdsTrackText = '';
+
+  function startRdsPolling() {
+    stopRdsPolling();
+    lastRdsTrackText = '';
+
+    // Fetch immediately
+    fetchRdsForActiveStream(true);
+
+    // Continuous loop polling
+    async function poll() {
+      if (!currentAudioStream || !currentAudioStream.url || els.nativeAudioPlayer.paused) {
+        return;
+      }
+      if (!isRdsFetching) {
+        await fetchRdsForActiveStream(false);
+      }
+      if (currentAudioStream && !els.nativeAudioPlayer.paused) {
+        rdsPollTimer = setTimeout(poll, 1200);
+      }
+    }
+
+    rdsPollTimer = setTimeout(poll, 1200);
+  }
+
+  function stopRdsPolling() {
+    if (rdsPollTimer) {
+      clearTimeout(rdsPollTimer);
+      rdsPollTimer = null;
+    }
+    isRdsFetching = false;
+  }
+
   // Fetch live RDS from backend for active stream
   async function fetchRdsForActiveStream(force = false) {
     if (!currentAudioStream || !currentAudioStream.url) return;
     const url = currentAudioStream.url;
     const stationName = currentAudioStream.name || '';
+    if (isRdsFetching && !force) return;
+    isRdsFetching = true;
+
     try {
       const qs = new URLSearchParams({
         url: url,
@@ -538,26 +631,51 @@
       const res = await fetch(`/api/rds?${qs.toString()}`);
       const data = await res.json();
       if (data && currentAudioStream && currentAudioStream.url === url) {
-        let text = '';
+        let cleanTitle = '';
         if (data.title && data.title !== 'Brak danych RDS') {
-          const trackTime = data.trackTime ? `[${data.trackTime}] ` : '';
-          text = `RDS: ${trackTime}${data.title}`;
+          // Remove any timestamps/hours: e.g. [12:00] or 12:00 - etc.
+          cleanTitle = data.title
+            .replace(/^\[\d{1,2}:\d{2}(?::\d{2})?\]\s*/, '')
+            .replace(/^\d{1,2}:\d{2}\s*[-–]\s*/, '')
+            .trim();
         } else if (data.station) {
-          text = `RDS: ${data.station}`;
+          cleanTitle = data.station.trim();
         }
 
-        if (text) {
-          if (els.audioRdsText.textContent !== text) {
-            els.audioRdsText.textContent = text;
-            els.audioRdsPill.classList.remove('hidden');
-            els.audioRdsPill.classList.add('rds-pill-pulse');
-            setTimeout(() => els.audioRdsPill.classList.remove('rds-pill-pulse'), 800);
+        if (cleanTitle) {
+          const newText = `RDS: ${cleanTitle}`;
+          const currentText = els.audioRdsText.textContent;
+
+          if (currentText !== newText) {
+            const wasEmptyOrInitial = !lastRdsTrackText || lastRdsTrackText === 'RDS: Pobieranie...';
+            lastRdsTrackText = cleanTitle;
+
+            // Transition text smoothly
+            els.audioRdsText.classList.add('rds-text-changing');
+            setTimeout(() => {
+              els.audioRdsText.textContent = newText;
+              els.audioRdsText.classList.remove('rds-text-changing');
+            }, 180);
+
+            els.audioRdsPill.classList.remove('hidden', 'rds-pill-pulse', 'rds-pill-changed');
+            void els.audioRdsPill.offsetWidth; // Force CSS reflow
+
+            if (!wasEmptyOrInitial) {
+              // Track change event! Glow animation and alert toast
+              els.audioRdsPill.classList.add('rds-pill-changed');
+              const isEn = currentLang === 'en';
+              showToast(isEn ? `🎵 Now playing on ${stationName}: ${cleanTitle}` : `🎵 Teraz w ${stationName}: ${cleanTitle}`, 3500);
+            } else {
+              els.audioRdsPill.classList.add('rds-pill-pulse');
+            }
           } else {
             els.audioRdsPill.classList.remove('hidden');
           }
         }
       }
-    } catch {}
+    } catch {} finally {
+      isRdsFetching = false;
+    }
   }
 
   // Audio Playback
@@ -567,10 +685,7 @@
       return;
     }
 
-    if (rdsPollingInterval) {
-      clearInterval(rdsPollingInterval);
-      rdsPollingInterval = null;
-    }
+    stopRdsPolling();
 
     const cleanDetails = details ? details.replace(/&bull;?/g, '•') : '';
     currentAudioStream = { name, url, details: cleanDetails };
@@ -579,6 +694,9 @@
     els.audioRdsPill.classList.add('hidden');
     els.audioRdsText.textContent = 'RDS: Pobieranie...';
 
+    // Show station logo in audio bar
+    updateAudioStationLogo(name, cleanDetails);
+
     els.nativeAudioPlayer.src = url;
     els.nativeAudioPlayer.play().then(() => {
       els.globalAudioBar.classList.remove('hidden');
@@ -586,9 +704,8 @@
       els.audioPlayPauseBtn.textContent = '⏸';
       showToast(`Odtwarzanie stacji: ${name}`);
 
-      // Fetch RDS immediately and poll every 12 seconds
-      fetchRdsForActiveStream(true);
-      rdsPollingInterval = setInterval(() => fetchRdsForActiveStream(false), 12000);
+      // Start rapid, continuous RDS polling
+      startRdsPolling();
     }).catch(err => {
       console.error('Audio play error:', err);
       showToast(`Błąd odtwarzania strumienia (${name}): ${err.message}`);
@@ -600,26 +717,17 @@
       els.nativeAudioPlayer.play();
       els.audioPlayPauseBtn.textContent = '⏸';
       els.globalAudioBar.classList.add('playing');
-      fetchRdsForActiveStream();
-      if (!rdsPollingInterval) {
-        rdsPollingInterval = setInterval(fetchRdsForActiveStream, 10000);
-      }
+      startRdsPolling();
     } else {
       els.nativeAudioPlayer.pause();
       els.audioPlayPauseBtn.textContent = '▶';
       els.globalAudioBar.classList.remove('playing');
-      if (rdsPollingInterval) {
-        clearInterval(rdsPollingInterval);
-        rdsPollingInterval = null;
-      }
+      stopRdsPolling();
     }
   }
 
   function stopAudio() {
-    if (rdsPollingInterval) {
-      clearInterval(rdsPollingInterval);
-      rdsPollingInterval = null;
-    }
+    stopRdsPolling();
     els.nativeAudioPlayer.pause();
     els.nativeAudioPlayer.src = '';
     els.globalAudioBar.classList.remove('playing');
@@ -831,14 +939,22 @@
       `;
     }
 
+    const logoUrl = getStationLogo(t.programOrMux, t.streamName || t.broadcaster);
+    const logoHtml = logoUrl ? `<img class="popup-station-logo" src="${logoUrl}" alt="Logo" />` : '';
+
     return `
       <div class="popup-container">
         <div class="popup-badge-row">
           <span class="badge ${badgeClass}">${categoryName}</span>
           <span style="font-size:11px;color:var(--text-muted);font-weight:600;">${t.system}</span>
         </div>
-        <div class="popup-title">${escapeHtml(t.name)}</div>
-        <div class="popup-subtitle">${escapeHtml(t.location || t.voivodeship)}</div>
+        <div class="popup-header-row">
+          <div style="flex:1;">
+            <div class="popup-title">${escapeHtml(t.name)}</div>
+            <div class="popup-subtitle">${escapeHtml(t.location || t.voivodeship)}</div>
+          </div>
+          ${logoHtml}
+        </div>
 
         ${audioHtml}
         ${rdsHtml}
@@ -894,8 +1010,11 @@
           if (res.ok) {
             const data = await res.json();
             if (data && data.title && data.title !== 'Brak danych RDS') {
-              const trackTime = data.trackTime ? `[${data.trackTime}] ` : '';
-              rdsTitleEl.textContent = `${trackTime}${data.title}`;
+              const cleanTitle = data.title
+                .replace(/^\[\d{1,2}:\d{2}(?::\d{2})?\]\s*/, '')
+                .replace(/^\d{1,2}:\d{2}\s*[-–]\s*/, '')
+                .trim();
+              rdsTitleEl.textContent = cleanTitle;
             } else if (data && data.station) {
               rdsTitleEl.textContent = data.station;
             } else {
@@ -910,7 +1029,7 @@
       fetchPopupRds(true);
       if (marker) {
         if (marker._popupRdsTimer) clearInterval(marker._popupRdsTimer);
-        marker._popupRdsTimer = setInterval(() => fetchPopupRds(false), 12000);
+        marker._popupRdsTimer = setInterval(() => fetchPopupRds(false), 3000);
       }
     }
 
@@ -1362,7 +1481,9 @@
   // Detail Modal
   async function openDetailModal(t) {
     const isEn = currentLang === 'en';
-    els.modalTitle.textContent = `${t.name} (${t.programOrMux})`;
+    const logoUrl = getStationLogo(t.programOrMux, t.streamName || t.broadcaster);
+    const logoImg = logoUrl ? `<img src="${logoUrl}" class="modal-station-logo" alt="Logo" /> ` : '';
+    els.modalTitle.innerHTML = `${logoImg}${escapeHtml(t.name)} (${escapeHtml(t.programOrMux)})`;
     els.modalCategoryBadge.className = `badge badge-${t.category}`;
     els.modalCategoryBadge.textContent = getCategoryLabel(t.category, currentLang);
 

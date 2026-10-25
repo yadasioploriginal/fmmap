@@ -85,6 +85,14 @@ function decodeHtmlEntities(str: string): string {
     .replace(/&gt;/g, '>');
 }
 
+function cleanTrackTitle(title: string): string {
+  if (!title) return '';
+  return decodeHtmlEntities(title)
+    .replace(/^\[\d{1,2}:\d{2}(?::\d{2})?\]\s*/, '')
+    .replace(/^\d{1,2}:\d{2}\s*[-–]\s*/, '')
+    .trim();
+}
+
 interface ExternalTrackResult {
   track: string;
   time?: string;
@@ -149,23 +157,22 @@ function fetchRdsFromStream(url: string, stationHint = '', timeoutMs = 3500): Pr
     const now = new Date();
     const timeStr = now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-    // First check external live playlist if station is known (gives real-time song title and timestamp)
+    // First check external live playlist if station is known (gives real-time song title)
     const lookupName = stationHint || url;
     const liveTrack = await fetchExternalPlaylistTrack(lookupName);
     if (liveTrack) {
       return resolve({
-        title: liveTrack.track,
+        title: cleanTrackTitle(liveTrack.track),
         station: stationHint || undefined,
-        trackTime: liveTrack.time,
         cachedAt: Date.now(),
-        timeStr: liveTrack.time || timeStr
+        timeStr
       });
     }
 
     if (!url || !url.startsWith('http')) {
       const fallbackTitle = stationHint || 'Emisja programu na żywo';
       return resolve({
-        title: fallbackTitle,
+        title: cleanTrackTitle(fallbackTitle),
         station: stationHint || undefined,
         cachedAt: Date.now(),
         timeStr
@@ -185,7 +192,7 @@ function fetchRdsFromStream(url: string, stationHint = '', timeoutMs = 3500): Pr
       }
 
       let title = tags.StreamTitle || tags.title || '';
-      title = decodeHtmlEntities(title.replace(/^\uFEFF/, '').trim());
+      title = cleanTrackTitle(title.replace(/^\uFEFF/, '').trim());
       const station = tags['icy-name'] || tags.service_name || stationHint || '';
       const genre = tags['icy-genre'] || '';
 
@@ -206,20 +213,19 @@ function fetchRdsFromStream(url: string, stationHint = '', timeoutMs = 3500): Pr
       const secondLiveTrack = await fetchExternalPlaylistTrack(secondLookupName);
       if (secondLiveTrack) {
         return resolve({
-          title: secondLiveTrack.track,
+          title: cleanTrackTitle(secondLiveTrack.track),
           station: station.trim() || stationHint || undefined,
           genre: genre.trim() || undefined,
           bitrate: bitrate.trim() || undefined,
-          trackTime: secondLiveTrack.time,
           cachedAt: Date.now(),
-          timeStr: secondLiveTrack.time || timeStr
+          timeStr
         });
       }
 
       // Fallback to stream title, station name, or live broadcast
       const fallbackTitle = title || station || stationHint || 'Emisja na żywo';
       resolve({
-        title: fallbackTitle,
+        title: cleanTrackTitle(fallbackTitle),
         station: station.trim() || undefined,
         genre: genre.trim() || undefined,
         bitrate: bitrate.trim() || undefined,
@@ -256,7 +262,20 @@ app.get('/api/rds', async (req: Request, res: Response) => {
     const cacheKey = `${cleanUrl}_${stationHint.trim()}`;
     const cached = rdsCache.get(cacheKey);
     const now = Date.now();
-    if (!force && cached && (now - cached.cachedAt) < 5000) {
+
+    // Stale-While-Revalidate: Return cached RDS in < 1 ms, update in background if older than 2.5s
+    if (!force && cached) {
+      if ((now - cached.cachedAt) >= 2500 && !(cached as any)._refreshing) {
+        (cached as any)._refreshing = true;
+        fetchRdsFromStream(cleanUrl, stationHint.trim())
+          .then(newRds => {
+            rdsCache.set(cacheKey, newRds);
+          })
+          .catch(() => {})
+          .finally(() => {
+            if (cached) (cached as any)._refreshing = false;
+          });
+      }
       return res.json(cached);
     }
 

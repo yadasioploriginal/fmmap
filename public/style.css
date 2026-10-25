@@ -796,6 +796,40 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.radio-stream-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.radio-stream-logo-box {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.radio-stream-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 3px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+}
+
+.radio-stream-logo-fallback {
+  font-size: 18px;
+  opacity: 0.8;
+}
+
 .radio-stream-item {
   display: flex;
   justify-content: space-between;
@@ -872,6 +906,53 @@ body {
   align-items: center;
   gap: 14px;
   min-width: 260px;
+}
+
+.audio-station-logo-box {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.audio-player-bar.playing .audio-station-logo-box {
+  border-color: rgba(34, 197, 94, 0.6);
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.35);
+}
+
+.audio-station-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  transition: transform 0.25s ease;
+}
+
+.audio-player-bar.playing .audio-station-logo-img {
+  animation: logoSoftPulse 3.5s ease-in-out infinite;
+}
+
+@keyframes logoSoftPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.audio-station-logo-fallback {
+  font-size: 24px;
+  line-height: 1;
+  opacity: 0.85;
 }
 
 .equalizer-bars {
@@ -954,6 +1035,40 @@ body {
   align-self: flex-start;
   margin-bottom: 2px;
   letter-spacing: 0.05em;
+}
+
+.rds-pill-changed {
+  animation: rdsChangedGlow 1.6s ease-out !important;
+}
+
+@keyframes rdsChangedGlow {
+  0% {
+    background: rgba(34, 197, 94, 0.6) !important;
+    border-color: #4ade80 !important;
+    color: #ffffff !important;
+    transform: scale(1.08);
+    box-shadow: 0 0 18px rgba(74, 222, 128, 0.95);
+  }
+  35% {
+    background: rgba(56, 189, 248, 0.5) !important;
+    border-color: #38bdf8 !important;
+    color: #e0f2fe !important;
+    transform: scale(1.04);
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.8);
+  }
+  100% {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(52, 211, 153, 0.4);
+    color: #34d399;
+    transform: scale(1);
+    box-shadow: none;
+  }
+}
+
+.rds-text-changing {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
 .audio-sub {
@@ -1418,6 +1533,35 @@ body {
 .leaflet-popup-close-button {
   color: var(--text-muted) !important;
   padding: 8px !important;
+}
+
+.modal-station-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-right: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.popup-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.popup-station-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 3px;
+  flex-shrink: 0;
 }
 
 .popup-title {
