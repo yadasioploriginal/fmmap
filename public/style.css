@@ -1348,21 +1348,30 @@ body {
 }
 
 /* ---------------- Leaflet Customization ---------------- */
+.leaflet-popup-pane {
+  z-index: 2000000 !important;
+}
+
+.leaflet-popup {
+  z-index: 2000000 !important;
+  margin-bottom: 24px !important;
+}
+
 .leaflet-popup-content-wrapper {
   background: var(--bg-secondary) !important;
   color: var(--text-main) !important;
   border: 1px solid var(--border-color) !important;
   border-radius: var(--radius-md) !important;
-  box-shadow: var(--shadow-lg) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
   padding: 0 !important;
 }
 
 .leaflet-popup-content {
-  margin: 14px !important;
+  margin: 12px 14px !important;
   line-height: 1.4 !important;
   font-family: inherit !important;
   min-width: 260px;
-  max-width: 340px;
+  max-width: 330px;
 }
 
 .leaflet-popup-tip {
@@ -1505,6 +1514,66 @@ body {
 .custom-pin:hover {
   transform: scale(1.25);
   z-index: 1000 !important;
+}
+
+.custom-pin.pin-selected {
+  transform: scale(1.35) !important;
+  box-shadow: 0 0 0 4px #38bdf8, 0 6px 16px rgba(0, 0, 0, 0.7) !important;
+  z-index: 1001 !important;
+}
+
+/* Live RDS Badge in Popup */
+.popup-rds-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+  font-size: 11px;
+}
+
+.popup-rds-badge .rds-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  animation: rdsBlink 1.8s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+.popup-rds-badge .popup-rds-label {
+  font-weight: 700;
+  color: #34d399;
+  letter-spacing: 0.5px;
+  font-size: 10px;
+}
+
+.popup-rds-badge .popup-rds-title {
+  color: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.rds-pill-pulse {
+  animation: rdsPillFlash 0.8s ease-out;
+}
+
+@keyframes rdsPillFlash {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+  50% { transform: scale(1.05); box-shadow: 0 0 12px rgba(16, 185, 129, 0.8); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+
+@keyframes rdsBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.85); }
 }
 
 .custom-pin.pin-tv { background: var(--color-tv); }

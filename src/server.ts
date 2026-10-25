@@ -28,41 +28,204 @@ console.log(`Loaded ${transmitters.length} transmitters into memory.`);
 // Geocoding memory cache
 const geocodeCache = new Map<string, any>();
 
-// RDS stream metadata memory cache (cache for 8 seconds to prevent excessive process spawning)
+// Station playlist mapping on odsluchane.eu for stations whose ICY streams return static station names
+const ODSLUCHANE_STATION_MAP: Record<string, number> = {
+  'radio zet': 1,
+  'zet': 1,
+  'rmf fm': 2,
+  'rmf': 2,
+  'eska': 3,
+  'rmf maxx': 4,
+  'rmf max': 4,
+  'maxxx': 4,
+  'antyradio': 5,
+  'rmf classic': 6,
+  'classic': 6,
+  'radio plus': 8,
+  'plus': 8,
+  'zlote przeboje': 9,
+  'złote przeboje': 9,
+  'eska rock': 10,
+  'rock radio': 13,
+  'mc radio': 15,
+  'radio feyma': 19,
+  'fama': 19,
+  'muzyczne radio': 23,
+  'radio kolor': 25,
+  'kolor': 25,
+  'vox fm': 30,
+  'vox': 30,
+  'eska2': 31,
+  'chillizet': 40,
+  'chilli zet': 40,
+  'jedynka': 46,
+  'program 1': 46,
+  'dwojka': 47,
+  'dwójka': 47,
+  'program 2': 47,
+  'trojka': 48,
+  'trójka': 48,
+  'program 3': 48,
+  'czworka': 49,
+  'czwórka': 49,
+  'meloradio': 51,
+  'melo': 51,
+  'muzo fm': 65,
+  'muzo': 65
+};
+
+function decodeHtmlEntities(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&#039;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+interface ExternalTrackResult {
+  track: string;
+  time?: string;
+}
+
+async function fetchExternalPlaylistTrack(stationNameOrUrl: string): Promise<ExternalTrackResult | null> {
+  const norm = stripDiacritics(stationNameOrUrl).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  let stationId: number | null = null;
+  for (const [k, id] of Object.entries(ODSLUCHANE_STATION_MAP)) {
+    if (norm.includes(k)) {
+      stationId = id;
+      break;
+    }
+  }
+
+  if (!stationId) return null;
+
+  try {
+    const res = await fetch(`https://www.odsluchane.eu/szukaj.php?r=${stationId}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    // Odsluchane.eu lists tracks chronologically (ascending), so the last row is the latest/now-playing track
+    const re = /<tr>\s*<td>(\d{2}:\d{2})<\/td>[\s\S]*?class="title-link"[^>]*>([\s\S]*?)<\/a>/gi;
+    let m;
+    const tracks: { time: string; title: string }[] = [];
+    while ((m = re.exec(html)) !== null) {
+      const time = m[1].trim();
+      const rawTitle = m[2].replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+      const title = decodeHtmlEntities(rawTitle);
+      if (title && title.length > 3 && title.includes('-')) {
+        tracks.push({ time, title });
+      }
+    }
+
+    if (tracks.length > 0) {
+      const latest = tracks[tracks.length - 1];
+      return {
+        track: latest.title,
+        time: latest.time
+      };
+    }
+  } catch {}
+  return null;
+}
+
+// RDS stream metadata memory cache (cache for 5 seconds to prevent excessive process spawning)
 interface RdsCacheItem {
   title: string;
   station?: string;
   bitrate?: string;
   genre?: string;
+  trackTime?: string;
   cachedAt: number;
+  timeStr: string;
 }
 const rdsCache = new Map<string, RdsCacheItem>();
 
-function fetchRdsFromStream(url: string, timeoutMs = 3500): Promise<RdsCacheItem> {
-  return new Promise((resolve) => {
+function fetchRdsFromStream(url: string, stationHint = '', timeoutMs = 3500): Promise<RdsCacheItem> {
+  return new Promise(async (resolve) => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    // First check external live playlist if station is known (gives real-time song title and timestamp)
+    const lookupName = stationHint || url;
+    const liveTrack = await fetchExternalPlaylistTrack(lookupName);
+    if (liveTrack) {
+      return resolve({
+        title: liveTrack.track,
+        station: stationHint || undefined,
+        trackTime: liveTrack.time,
+        cachedAt: Date.now(),
+        timeStr: liveTrack.time || timeStr
+      });
+    }
+
+    if (!url || !url.startsWith('http')) {
+      const fallbackTitle = stationHint || 'Emisja programu na żywo';
+      return resolve({
+        title: fallbackTitle,
+        station: stationHint || undefined,
+        cachedAt: Date.now(),
+        timeStr
+      });
+    }
+
     const cmd = `ffprobe -v quiet -print_format json -show_entries format_tags -show_entries format=bit_rate,format_name "${url}"`;
-    exec(cmd, { timeout: timeoutMs }, (err, stdout) => {
-      if (err || !stdout) {
-        return resolve({ title: '', cachedAt: Date.now() });
+    exec(cmd, { timeout: timeoutMs }, async (err, stdout) => {
+      let tags: Record<string, string> = {};
+      let bitrate = '';
+      if (!err && stdout) {
+        try {
+          const data = JSON.parse(stdout);
+          tags = data.format?.tags || {};
+          bitrate = tags['icy-br'] || (data.format?.bit_rate ? Math.round(data.format.bit_rate / 1000) + ' kbps' : '');
+        } catch {}
       }
-      try {
-        const data = JSON.parse(stdout);
-        const tags = data.format?.tags || {};
-        let title = tags.StreamTitle || tags.title || tags['icy-name'] || '';
-        title = title.replace(/^\uFEFF/, '').trim();
-        const station = tags['icy-name'] || tags.service_name || '';
-        const genre = tags['icy-genre'] || '';
-        const bitrate = tags['icy-br'] || (data.format?.bit_rate ? Math.round(data.format.bit_rate / 1000) + ' kbps' : '');
-        resolve({
-          title: title || station || 'Audycja na żywo',
-          station: station ? station.trim() : undefined,
-          genre: genre ? genre.trim() : undefined,
-          bitrate: bitrate ? bitrate.trim() : undefined,
-          cachedAt: Date.now()
+
+      let title = tags.StreamTitle || tags.title || '';
+      title = decodeHtmlEntities(title.replace(/^\uFEFF/, '').trim());
+      const station = tags['icy-name'] || tags.service_name || stationHint || '';
+      const genre = tags['icy-genre'] || '';
+
+      // If stream title has actual song info (e.g. "Artist - Song")
+      if (title && title.includes('-') && title.length > 4) {
+        return resolve({
+          title,
+          station: station.trim() || undefined,
+          genre: genre.trim() || undefined,
+          bitrate: bitrate.trim() || undefined,
+          cachedAt: Date.now(),
+          timeStr
         });
-      } catch {
-        resolve({ title: '', cachedAt: Date.now() });
       }
+
+      // Check external live playlist again using stream metadata station name
+      const secondLookupName = station.trim() || stationHint || url;
+      const secondLiveTrack = await fetchExternalPlaylistTrack(secondLookupName);
+      if (secondLiveTrack) {
+        return resolve({
+          title: secondLiveTrack.track,
+          station: station.trim() || stationHint || undefined,
+          genre: genre.trim() || undefined,
+          bitrate: bitrate.trim() || undefined,
+          trackTime: secondLiveTrack.time,
+          cachedAt: Date.now(),
+          timeStr: secondLiveTrack.time || timeStr
+        });
+      }
+
+      // Fallback to stream title, station name, or live broadcast
+      const fallbackTitle = title || station || stationHint || 'Emisja na żywo';
+      resolve({
+        title: fallbackTitle,
+        station: station.trim() || undefined,
+        genre: genre.trim() || undefined,
+        bitrate: bitrate.trim() || undefined,
+        cachedAt: Date.now(),
+        timeStr
+      });
     });
   });
 }
@@ -70,19 +233,35 @@ function fetchRdsFromStream(url: string, timeoutMs = 3500): Promise<RdsCacheItem
 // API: Get live RDS / ICY metadata for a radio stream
 app.get('/api/rds', async (req: Request, res: Response) => {
   try {
-    const streamUrl = req.query.url as string;
-    if (!streamUrl || streamUrl.trim().length === 0) {
-      return res.status(400).json({ error: 'Brak parametru url' });
+    let streamUrl = (req.query.url as string) || '';
+    const stationHint = (req.query.station as string) || '';
+    const force = req.query.force === '1';
+
+    if (!streamUrl && !stationHint) {
+      return res.status(400).json({ error: 'Brak parametru url lub station' });
     }
+
+    // If streamUrl is empty, attempt to resolve it from transmitters
+    if (!streamUrl && stationHint) {
+      const match = transmitters.find(t => 
+        t.streamUrl && (stripDiacritics(t.programOrMux).includes(stripDiacritics(stationHint)) || 
+                       (t.streamName && stripDiacritics(t.streamName).includes(stripDiacritics(stationHint))))
+      );
+      if (match && match.streamUrl) {
+        streamUrl = match.streamUrl;
+      }
+    }
+
     const cleanUrl = streamUrl.trim();
-    const cached = rdsCache.get(cleanUrl);
+    const cacheKey = `${cleanUrl}_${stationHint.trim()}`;
+    const cached = rdsCache.get(cacheKey);
     const now = Date.now();
-    if (cached && (now - cached.cachedAt) < 8000) {
+    if (!force && cached && (now - cached.cachedAt) < 5000) {
       return res.json(cached);
     }
 
-    const rds = await fetchRdsFromStream(cleanUrl);
-    rdsCache.set(cleanUrl, rds);
+    const rds = await fetchRdsFromStream(cleanUrl, stationHint.trim());
+    rdsCache.set(cacheKey, rds);
     res.json(rds);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

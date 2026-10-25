@@ -68,7 +68,7 @@ Wyszukiwarka live oraz filtry działają bez względu na to, czy wpiszesz polski
 
 ```bash
 # 1. Klonowanie repozytorium
-git clone <url-repozytorium>
+git clone https://github.com/yadasioploriginal/fmmap.git
 cd fmmap
 
 # 2. Instalacja zależności

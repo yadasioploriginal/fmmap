@@ -133,7 +133,7 @@
       html: `<div class="custom-pin ${pinClass}"><span class="pin-icon">${glyph}</span></div>`,
       iconSize: [28, 28],
       iconAnchor: [14, 14],
-      popupAnchor: [0, -14]
+      popupAnchor: [0, -32]
     });
   }
 
@@ -209,6 +209,8 @@
     // Marker Cluster Group
     clusterGroup = L.markerClusterGroup({
       maxClusterRadius: (config && config.maxClusterRadius) || 50,
+      spiderfyDistanceMultiplier: 2.2, // Fans out spiderfied dots with generous spacing
+      spiderLegPolylineOptions: { weight: 1.5, color: '#38bdf8', opacity: 0.6 },
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
       zoomToBoundsOnClick: true,
@@ -294,19 +296,37 @@
   }
 
   // Fetch live RDS from backend for active stream
-  async function fetchRdsForActiveStream() {
+  async function fetchRdsForActiveStream(force = false) {
     if (!currentAudioStream || !currentAudioStream.url) return;
     const url = currentAudioStream.url;
+    const stationName = currentAudioStream.name || '';
     try {
-      const res = await fetch(`/api/rds?url=${encodeURIComponent(url)}`);
+      const qs = new URLSearchParams({
+        url: url,
+        station: stationName,
+        _t: Date.now().toString()
+      });
+      if (force) qs.set('force', '1');
+      const res = await fetch(`/api/rds?${qs.toString()}`);
       const data = await res.json();
       if (data && currentAudioStream && currentAudioStream.url === url) {
+        let text = '';
         if (data.title && data.title !== 'Brak danych RDS') {
-          els.audioRdsText.textContent = `RDS: ${data.title}`;
-          els.audioRdsPill.classList.remove('hidden');
+          const trackTime = data.trackTime ? `[${data.trackTime}] ` : '';
+          text = `RDS: ${trackTime}${data.title}`;
         } else if (data.station) {
-          els.audioRdsText.textContent = `RDS: ${data.station}`;
-          els.audioRdsPill.classList.remove('hidden');
+          text = `RDS: ${data.station}`;
+        }
+
+        if (text) {
+          if (els.audioRdsText.textContent !== text) {
+            els.audioRdsText.textContent = text;
+            els.audioRdsPill.classList.remove('hidden');
+            els.audioRdsPill.classList.add('rds-pill-pulse');
+            setTimeout(() => els.audioRdsPill.classList.remove('rds-pill-pulse'), 800);
+          } else {
+            els.audioRdsPill.classList.remove('hidden');
+          }
         }
       }
     } catch {}
@@ -337,9 +357,9 @@
       els.audioPlayPauseBtn.textContent = '⏸';
       showToast(`Odtwarzanie stacji: ${name}`);
 
-      // Fetch RDS immediately and poll every 10 seconds
-      fetchRdsForActiveStream();
-      rdsPollingInterval = setInterval(fetchRdsForActiveStream, 10000);
+      // Fetch RDS immediately and poll every 12 seconds
+      fetchRdsForActiveStream(true);
+      rdsPollingInterval = setInterval(() => fetchRdsForActiveStream(false), 12000);
     }).catch(err => {
       console.error('Audio play error:', err);
       showToast(`Błąd odtwarzania strumienia (${name}): ${err.message}`);
@@ -468,11 +488,51 @@
       // Bind popup
       marker.bindPopup(() => createPopupHtml(t), {
         maxWidth: 340,
-        className: 'custom-leaflet-popup'
+        className: 'custom-leaflet-popup',
+        offset: [0, -20],
+        autoPan: true,
+        autoPanPaddingTopLeft: [50, 140],
+        autoPanPaddingBottomRight: [50, 50]
+      });
+
+      // When marker is clicked, dynamically lift popup above ALL dots in this spiderfied group
+      marker.on('click', () => {
+        let yOffset = -24;
+        if (clusterGroup && clusterGroup._spiderfied) {
+          const children = clusterGroup._spiderfied.getAllChildMarkers();
+          if (children && children.includes(marker)) {
+            const clickedPt = map.latLngToContainerPoint(marker.getLatLng());
+            let minY = clickedPt.y;
+            for (const child of children) {
+              const pt = map.latLngToContainerPoint(child.getLatLng());
+              if (pt.y < minY) {
+                minY = pt.y;
+              }
+            }
+            const deltaY = clickedPt.y - minY;
+            // Place popup 36px cleanly above the highest dot in the spiderfied group
+            yOffset = -(deltaY + 36);
+          }
+        }
+        const popup = marker.getPopup();
+        if (popup) {
+          popup.options.offset = [0, yOffset];
+        }
       });
 
       marker.on('popupopen', () => {
-        attachPopupEvents(t);
+        const pinEl = marker.getElement()?.querySelector('.custom-pin');
+        if (pinEl) pinEl.classList.add('pin-selected');
+        attachPopupEvents(t, marker);
+      });
+
+      marker.on('popupclose', () => {
+        const pinEl = marker.getElement()?.querySelector('.custom-pin');
+        if (pinEl) pinEl.classList.remove('pin-selected');
+        if (marker._popupRdsTimer) {
+          clearInterval(marker._popupRdsTimer);
+          marker._popupRdsTimer = null;
+        }
       });
 
       markers.push(marker);
@@ -508,6 +568,18 @@
       `;
     }
 
+    // Live RDS box for radio transmitters
+    let rdsHtml = '';
+    if (t.category === 'fm' || t.category === 'dab' || t.category === 'am') {
+      rdsHtml = `
+        <div class="popup-rds-badge" id="popup-rds-${t.id}">
+          <span class="rds-pulse-dot"></span>
+          <span class="popup-rds-label">RDS:</span>
+          <span class="popup-rds-title" id="popup-rds-title-${t.id}">Pobieranie danych na żywo...</span>
+        </div>
+      `;
+    }
+
     // TV Channels list if available
     let tvChannelsHtml = '';
     if (t.channelsList && t.channelsList.length > 0) {
@@ -529,6 +601,7 @@
         <div class="popup-subtitle">${escapeHtml(t.location || t.voivodeship)}</div>
 
         ${audioHtml}
+        ${rdsHtml}
 
         <table class="popup-info-table">
           <tr><td>Co nadaje:</td><td><strong>${escapeHtml(t.programOrMux)}</strong></td></tr>
@@ -557,12 +630,47 @@
   }
 
   // Attach Event Listeners to Popup Elements
-  function attachPopupEvents(t) {
+  function attachPopupEvents(t, marker) {
     const covBtn = document.getElementById(`btn-coverage-${t.id}`);
     const calcBtn = document.getElementById(`btn-calc-${t.id}`);
     const copyBtn = document.getElementById(`btn-copy-${t.id}`);
     const detailBtn = document.getElementById(`btn-detail-${t.id}`);
     const audioBtn = document.getElementById(`btn-audio-${t.id}`);
+
+    // Live RDS polling for popup
+    const rdsTitleEl = document.getElementById(`popup-rds-title-${t.id}`);
+    if (rdsTitleEl) {
+      const fetchPopupRds = async (force = false) => {
+        try {
+          const qs = new URLSearchParams({
+            url: t.streamUrl || '',
+            station: t.streamName || t.programOrMux || '',
+            _t: Date.now().toString()
+          });
+          if (force) qs.set('force', '1');
+          const res = await fetch(`/api/rds?${qs.toString()}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.title && data.title !== 'Brak danych RDS') {
+              const trackTime = data.trackTime ? `[${data.trackTime}] ` : '';
+              rdsTitleEl.textContent = `${trackTime}${data.title}`;
+            } else if (data && data.station) {
+              rdsTitleEl.textContent = data.station;
+            } else {
+              rdsTitleEl.textContent = 'Emisja programu na żywo';
+            }
+          }
+        } catch {
+          rdsTitleEl.textContent = 'Emisja programu na żywo';
+        }
+      };
+
+      fetchPopupRds(true);
+      if (marker) {
+        if (marker._popupRdsTimer) clearInterval(marker._popupRdsTimer);
+        marker._popupRdsTimer = setInterval(() => fetchPopupRds(false), 12000);
+      }
+    }
 
     if (covBtn) {
       covBtn.addEventListener('click', () => {
