@@ -510,7 +510,7 @@
       div.innerHTML = `
         <div class="radio-stream-info">
           <strong>${escapeHtml(s.name)}</strong>
-          <span>${isEn ? 'Live streaming &bull; MP3/AAC' : 'Odsłuch na żywo &bull; MP3/AAC'}</span>
+          <span>${isEn ? 'Live streaming • MP3/AAC' : 'Odsłuch na żywo • MP3/AAC'}</span>
         </div>
         <button class="radio-play-btn" title="${isEn ? 'Play station' : 'Odtwórz stację'}">▶</button>
       `;
@@ -572,9 +572,10 @@
       rdsPollingInterval = null;
     }
 
-    currentAudioStream = { name, url, details };
+    const cleanDetails = details ? details.replace(/&bull;?/g, '•') : '';
+    currentAudioStream = { name, url, details: cleanDetails };
     els.audioStationName.textContent = name;
-    els.audioStationDetails.textContent = details;
+    els.audioStationDetails.textContent = cleanDetails;
     els.audioRdsPill.classList.add('hidden');
     els.audioRdsText.textContent = 'RDS: Pobieranie...';
 
@@ -948,7 +949,7 @@
 
     if (audioBtn) {
       audioBtn.addEventListener('click', () => {
-        playAudioStream(t.streamName || t.programOrMux, t.streamUrl, `${t.name} &bull; ${t.frequency} ${t.frequencyUnit}`);
+        playAudioStream(t.streamName || t.programOrMux, t.streamUrl, `${t.name} • ${t.frequency} ${t.frequencyUnit}`);
       });
     }
   }
@@ -1030,7 +1031,7 @@
     els.calcTopInfo.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <strong style="color:#fff;font-size:14px;">${escapeHtml(t.name)}</strong> &bull; 
+          <strong style="color:#fff;font-size:14px;">${escapeHtml(t.name)}</strong> • 
           <span style="color:var(--accent);font-weight:600;">${escapeHtml(t.programOrMux)}</span>
           <div style="color:var(--text-dim);font-size:11px;">${escapeHtml(t.location || t.voivodeship)}</div>
         </div>
@@ -1228,7 +1229,7 @@
         <div class="calc-meter">
           <div class="calc-meter-head">
             <span>${isEn ? 'Signal strength & quality:' : 'Siła i jakość sygnału:'}</span>
-            <span class="${qualityClass}" style="font-weight:700;">${percent}% &bull; ${qualityText}</span>
+            <span class="${qualityClass}" style="font-weight:700;">${percent}% • ${qualityText}</span>
           </div>
           <div class="signal-bar-track">
             <div class="signal-bar-fill ${qualityClass}" style="width: ${percent}%;"></div>
@@ -1402,7 +1403,7 @@
               <div class="site-item" data-id="${s.id}">
                 <div>
                   <strong>${escapeHtml(s.programOrMux)}</strong>
-                  <span style="color:var(--text-dim);font-size:11px;"> &bull; ${s.frequency} ${s.frequencyUnit}</span>
+                  <span style="color:var(--text-dim);font-size:11px;"> • ${s.frequency} ${s.frequencyUnit}</span>
                 </div>
                 <span class="site-item-badge badge-${s.category}">${s.system} (${s.powerKw} kW)</span>
               </div>
@@ -1501,7 +1502,7 @@
     const modalAudioBtn = document.getElementById('modalPlayAudioBtn');
     if (modalAudioBtn) {
       modalAudioBtn.onclick = () => {
-        playAudioStream(t.streamName || t.programOrMux, t.streamUrl, `${t.name} &bull; ${t.frequency} ${t.frequencyUnit}`);
+        playAudioStream(t.streamName || t.programOrMux, t.streamUrl, `${t.name} • ${t.frequency} ${t.frequencyUnit}`);
       };
     }
 
@@ -1607,7 +1608,7 @@
           <span><strong>${t.frequency} ${t.frequencyUnit}</strong></span>
         </div>
         <div class="list-item-details">
-          <span>${t.powerKw} kW &bull; ${t.polarization}</span>
+          <span>${t.powerKw} kW • ${t.polarization}</span>
           ${distText}
         </div>
       `;
