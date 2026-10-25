@@ -314,14 +314,10 @@
       if (currentLang === 'en') {
         sourceEl.innerHTML = `
           <p>Data: Official registry of radio permits by <strong>UKE (Office of Electronic Communications)</strong>.</p>
-          <p>Radio streaming: Verified streams from <strong>github.com/web-radio/webradio</strong>.</p>
-          <p>Port: <strong>9354</strong> | Configuration: <code>config.json</code></p>
         `;
       } else {
         sourceEl.innerHTML = `
           <p>Dane: Oficjalny wykaz pozwoleń radiowych <strong>UKE (Urząd Komunikacji Elektronicznej)</strong>.</p>
-          <p>Odsłuch radia: Zweryfikowane strumienie z <strong>github.com/web-radio/webradio</strong>.</p>
-          <p>Port: <strong>9354</strong> | Konfiguracja: <code>config.json</code></p>
         `;
       }
     }
