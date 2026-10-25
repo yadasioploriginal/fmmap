@@ -20,7 +20,7 @@
     "map"
   ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "cors": "^2.8.6",
     "csv-parse": "^7.0.3",

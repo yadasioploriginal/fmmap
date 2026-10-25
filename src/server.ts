@@ -7,12 +7,15 @@ import { AppConfig, Transmitter } from './types.js';
 import { getOrBuildTransmitterCache } from './data-parser.js';
 
 function loadConfig(): AppConfig {
-  const configPath = path.resolve('./config.json');
-  if (!fs.existsSync(configPath)) {
-    throw new Error(`Configuration file not found: ${configPath}`);
+  const configPath = path.resolve(process.cwd(), 'config.json');
+  if (fs.existsSync(configPath)) {
+    return JSON.parse(fs.readFileSync(configPath, 'utf8')) as AppConfig;
   }
-  const raw = fs.readFileSync(configPath, 'utf8');
-  return JSON.parse(raw) as AppConfig;
+  const altPath = path.resolve(__dirname, '../config.json');
+  if (fs.existsSync(altPath)) {
+    return JSON.parse(fs.readFileSync(altPath, 'utf8')) as AppConfig;
+  }
+  throw new Error(`Configuration file not found: ${configPath}`);
 }
 
 const config = loadConfig();
@@ -475,15 +478,19 @@ app.use((_req: Request, res: Response) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 
-// Start listening on configured port and host
+// Start listening on configured port and host (only if not running in serverless Vercel environment)
 const PORT = config.server.port || 9354;
 const HOST = config.server.host || '0.0.0.0';
 
-app.listen(PORT, HOST, () => {
-  console.log(`=======================================================`);
-  console.log(`   Polska - Mapa Nadajników DVB-T/T2 & Radio FM/DAB+/AM`);
-  console.log(`   Serwer uruchomiony: http://localhost:${PORT}`);
-  console.log(`   Adres sieciowy:     http://${HOST}:${PORT}`);
-  console.log(`   Konfiguracja:       config.json`);
-  console.log(`=======================================================`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, HOST, () => {
+    console.log(`=======================================================`);
+    console.log(`   Polska - Mapa Nadajników DVB-T/T2 & Radio FM/DAB+/AM`);
+    console.log(`   Serwer uruchomiony: http://localhost:${PORT}`);
+    console.log(`   Adres sieciowy:     http://${HOST}:${PORT}`);
+    console.log(`   Konfiguracja:       config.json`);
+    console.log(`=======================================================`);
+  });
+}
+
+export default app;

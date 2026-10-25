@@ -822,38 +822,80 @@
         title: `${t.name} - ${t.programOrMux} (${t.frequency} ${t.frequencyUnit})`
       });
 
-      // Bind popup
+      // Bind popup (autoPan keeps popup and markers in viewport)
       marker.bindPopup(() => createPopupHtml(t), {
-        maxWidth: 340,
-        className: 'custom-leaflet-popup',
-        offset: [0, -20],
+        maxWidth: 320,
+        className: 'custom-leaflet-popup popup-above-pin',
+        offset: [0, -22],
         autoPan: true,
-        autoPanPaddingTopLeft: [50, 140],
-        autoPanPaddingBottomRight: [50, 50]
+        autoPanPaddingTopLeft: [60, 60],
+        autoPanPaddingBottomRight: [60, 60]
       });
 
-      // When marker is clicked, dynamically lift popup above ALL dots in this spiderfied group
+      // Smart positioning: when clicked, calculate direction away from spiderfied center
       marker.on('click', () => {
-        let yOffset = -24;
+        // Mobile & tablet: open sleek bottom sheet instead of blocking the map!
+        if (window.innerWidth <= 768) {
+          marker.closePopup();
+          openTransmitterBottomSheet(t);
+          return;
+        }
+
+        let offsetX = 0;
+        let offsetY = -24;
+        let popupClass = 'custom-leaflet-popup popup-above-pin';
+
         if (clusterGroup && clusterGroup._spiderfied) {
           const children = clusterGroup._spiderfied.getAllChildMarkers();
           if (children && children.includes(marker)) {
             const clickedPt = map.latLngToContainerPoint(marker.getLatLng());
-            let minY = clickedPt.y;
+            
+            // Calculate centroid of the spider group
+            let sumX = 0;
+            let sumY = 0;
             for (const child of children) {
               const pt = map.latLngToContainerPoint(child.getLatLng());
-              if (pt.y < minY) {
-                minY = pt.y;
-              }
+              sumX += pt.x;
+              sumY += pt.y;
             }
-            const deltaY = clickedPt.y - minY;
-            // Place popup 36px cleanly above the highest dot in the spiderfied group
-            yOffset = -(deltaY + 36);
+            const centerX = sumX / children.length;
+            const centerY = sumY / children.length;
+
+            const dy = clickedPt.y - centerY;
+            const dx = clickedPt.x - centerX;
+
+            // If marker is in the lower half of the spider ring:
+            // Open popup BELOW the dot so it NEVER covers the other dots above it!
+            if (dy > 8) {
+              offsetY = 32;
+              popupClass = 'custom-leaflet-popup popup-below-pin';
+            } else {
+              offsetY = -24;
+              popupClass = 'custom-leaflet-popup popup-above-pin';
+            }
+
+            // Offset horizontally if significantly to the left or right
+            if (Math.abs(dx) > 20) {
+              offsetX = Math.sign(dx) * 16;
+            }
+
+            // Ensure smooth panning so the popup and all other dots remain visible
+            setTimeout(() => {
+              const curPt = map.latLngToContainerPoint(marker.getLatLng());
+              const mapH = map.getSize().y;
+              if (dy > 8 && curPt.y > mapH - 280) {
+                map.panBy([0, 160], { animate: true, duration: 0.25 });
+              } else if (dy <= 8 && curPt.y < 280) {
+                map.panBy([0, -160], { animate: true, duration: 0.25 });
+              }
+            }, 60);
           }
         }
+
         const popup = marker.getPopup();
         if (popup) {
-          popup.options.offset = [0, yOffset];
+          popup.options.offset = [offsetX, offsetY];
+          popup.options.className = popupClass;
         }
       });
 
@@ -939,19 +981,40 @@
       `;
     }
 
+    const sameSite = allTransmitters.filter(x => x.siteId === t.siteId && x.id !== t.id);
+    let siteChipsHtml = '';
+    if (sameSite.length > 0) {
+      siteChipsHtml = `
+        <div class="popup-site-section">
+          <div class="popup-site-label">${isEn ? `Other on this mast (${sameSite.length}):` : `Inne z tego masztu (${sameSite.length}):`}</div>
+          <div class="popup-site-chips">
+            ${sameSite.slice(0, 5).map(s => `
+              <button class="popup-site-chip" data-site-tx-id="${s.id}" title="${escapeHtml(s.programOrMux)} (${s.frequency} ${s.frequencyUnit})">
+                ${escapeHtml(s.programOrMux)}
+              </button>
+            `).join('')}
+            ${sameSite.length > 5 ? `<button class="popup-site-chip popup-site-chip-more" id="btn-more-mast-${t.id}">+${sameSite.length - 5}</button>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
     const logoUrl = getStationLogo(t.programOrMux, t.streamName || t.broadcaster);
     const logoHtml = logoUrl ? `<img class="popup-station-logo" src="${logoUrl}" alt="Logo" />` : '';
 
     return `
       <div class="popup-container">
         <div class="popup-badge-row">
-          <span class="badge ${badgeClass}">${categoryName}</span>
-          <span style="font-size:11px;color:var(--text-muted);font-weight:600;">${t.system}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="badge ${badgeClass}">${categoryName}</span>
+            <span class="popup-system-tag">${t.system}</span>
+          </div>
+          <button id="btn-dock-${t.id}" class="popup-dock-btn" title="${isEn ? 'Dock to bottom sheet' : 'Przenieś do panelu dolnego (nie zasłaniaj)'}">📌</button>
         </div>
         <div class="popup-header-row">
-          <div style="flex:1;">
+          <div style="flex:1;min-width:0;">
             <div class="popup-title">${escapeHtml(t.name)}</div>
-            <div class="popup-subtitle">${escapeHtml(t.location || t.voivodeship)}</div>
+            <div class="popup-subtitle">${escapeHtml(t.programOrMux)} &bull; ${escapeHtml(t.location || t.voivodeship)}</div>
           </div>
           ${logoHtml}
         </div>
@@ -959,29 +1022,40 @@
         ${audioHtml}
         ${rdsHtml}
 
-        <table class="popup-info-table">
-          <tr><td>${isEn ? 'Program / MUX:' : 'Co nadaje:'}</td><td><strong>${escapeHtml(t.programOrMux)}</strong></td></tr>
-          <tr><td>${isEn ? 'Broadcaster:' : 'Kto nadaje:'}</td><td><strong>${escapeHtml(t.broadcaster)}</strong></td></tr>
-          <tr><td>${isEn ? 'Frequency:' : 'Częstotliwość:'}</td><td>${freqDisplay}</td></tr>
-          <tr><td>${isEn ? 'ERP Power:' : 'Moc ERP:'}</td><td><strong>${t.powerKw} kW</strong> (${t.powerDbw} dBW)</td></tr>
-          <tr><td>${isEn ? 'Antenna Height:' : 'Wysokość:'}</td><td>${t.heightAgl} m ${isEn ? 'AGL' : 'n.p.t.'} (${t.heightAmsl} m ${isEn ? 'AMSL' : 'n.p.m.'})</td></tr>
-          <tr><td>${isEn ? 'Polarization:' : 'Polaryzacja:'}</td><td>${polDisplay} (${charDisplay})</td></tr>
-        </table>
+        <div class="popup-specs-grid">
+          <div class="spec-cell">
+            <span class="spec-cell-label">${isEn ? 'Freq' : 'Częst.'}</span>
+            <span class="spec-cell-val">${freqDisplay}</span>
+          </div>
+          <div class="spec-cell">
+            <span class="spec-cell-label">${isEn ? 'ERP Power' : 'Moc ERP'}</span>
+            <span class="spec-cell-val">${t.powerKw} kW</span>
+          </div>
+          <div class="spec-cell">
+            <span class="spec-cell-label">${isEn ? 'Antenna' : 'Antena'}</span>
+            <span class="spec-cell-val">${t.heightAgl}m (${polDisplay})</span>
+          </div>
+          <div class="spec-cell">
+            <span class="spec-cell-label">${isEn ? 'Range' : 'Zasięg'}</span>
+            <span class="spec-cell-val">~${t.estimatedRangeKm} km</span>
+          </div>
+        </div>
 
         ${tvChannelsHtml}
+        ${siteChipsHtml}
 
         <div class="popup-btn-row">
           <button class="popup-btn ${isCircleActive ? 'popup-btn-active-circle' : ''}" id="btn-coverage-${t.id}">
             ${isCircleActive 
-              ? (isEn ? '❌ Disable coverage' : '❌ Wyłącz obręb') 
-              : (isEn ? `📡 Coverage (~${t.estimatedRangeKm} km)` : `📡 Zasięg (~${t.estimatedRangeKm} km)`)}
+              ? (isEn ? '❌ Disable' : '❌ Wyłącz obręb') 
+              : (isEn ? `📡 Coverage` : `📡 Zasięg`)}
           </button>
           <button class="popup-btn" id="btn-calc-${t.id}">${isEn ? '📐 Signal Calc' : '📐 Oblicz sygnał'}</button>
           <button class="popup-btn" id="btn-detail-${t.id}">${isEn ? 'ℹ️ More' : 'ℹ️ Więcej'}</button>
         </div>
-        <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
-          <button id="btn-copy-${t.id}" style="background:none;border:none;color:var(--text-dim);font-size:11px;cursor:pointer;">${isEn ? '📋 Copy coordinates' : '📋 Kopiuj współrzędne'}</button>
-          <a href="${gmapsUrl}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:11px;text-decoration:none;">Google Maps &rarr;</a>
+        <div class="popup-footer-row">
+          <button id="btn-copy-${t.id}" class="popup-footer-link">${isEn ? '📋 Copy coords' : '📋 Kopiuj współrzędne'}</button>
+          <a href="${gmapsUrl}" target="_blank" rel="noopener noreferrer" class="popup-footer-link" style="color:var(--accent);">Google Maps &rarr;</a>
         </div>
       </div>
     `;
@@ -1071,6 +1145,180 @@
         playAudioStream(t.streamName || t.programOrMux, t.streamUrl, `${t.name} • ${t.frequency} ${t.frequencyUnit}`);
       });
     }
+
+    // Dock to Bottom Sheet button
+    const dockBtn = document.getElementById(`btn-dock-${t.id}`);
+    if (dockBtn) {
+      dockBtn.addEventListener('click', () => {
+        marker.closePopup();
+        openTransmitterBottomSheet(t);
+      });
+    }
+
+    // Same mast quick-switcher chips in popup
+    const popupEl = marker.getPopup()?.getElement();
+    if (popupEl) {
+      popupEl.querySelectorAll('[data-site-tx-id]').forEach(chip => {
+        chip.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetId = Number(chip.dataset.siteTxId);
+          const targetTx = allTransmitters.find(x => x.id === targetId);
+          if (targetTx) {
+            marker.setPopupContent(createPopupHtml(targetTx));
+            attachPopupEvents(targetTx, marker);
+          }
+        });
+      });
+      const moreMastBtn = document.getElementById(`btn-more-mast-${t.id}`);
+      if (moreMastBtn) {
+        moreMastBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDetailModal(t);
+        });
+      }
+    }
+  }
+
+  // Open Transmitter in Mobile / Tablet Non-Obscuring Bottom Sheet
+  function openTransmitterBottomSheet(t) {
+    const isEn = currentLang === 'en';
+    const sheet = document.getElementById('transmitterBottomSheet');
+    if (!sheet) return;
+
+    const logoUrl = getStationLogo(t.programOrMux, t.streamName || t.broadcaster);
+    const logoImg = document.getElementById('sheetLogoImg');
+    const logoWrap = document.getElementById('sheetLogoWrap');
+
+    if (logoUrl && logoImg && logoWrap) {
+      logoImg.src = logoUrl;
+      logoImg.classList.remove('hidden');
+      logoWrap.classList.remove('hidden');
+    } else if (logoWrap) {
+      logoWrap.classList.add('hidden');
+    }
+
+    document.getElementById('sheetCategoryBadge').className = `badge badge-${t.category}`;
+    document.getElementById('sheetCategoryBadge').textContent = getCategoryLabel(t.category, currentLang);
+    document.getElementById('sheetSystemBadge').textContent = t.system;
+    document.getElementById('sheetTitle').textContent = `${t.name} (${t.programOrMux})`;
+    document.getElementById('sheetLocation').textContent = `${escapeHtml(t.broadcaster)} • ${escapeHtml(t.location || t.voivodeship)}`;
+
+    const sameSite = allTransmitters.filter(x => x.siteId === t.siteId && x.id !== t.id);
+    const isCircleActive = activeCoverageCircles.has(t.id);
+
+    let audioBtnHtml = '';
+    if (t.streamUrl) {
+      audioBtnHtml = `
+        <button class="btn-success sheet-play-btn" id="sheetPlayAudioBtn">
+          ▶️ ${isEn ? 'Listen live:' : 'Odsłuchaj na żywo:'} ${escapeHtml(t.streamName || t.programOrMux)}
+        </button>
+      `;
+    }
+
+    let rdsHtml = '';
+    if (t.category === 'fm' || t.category === 'dab' || t.category === 'am') {
+      rdsHtml = `
+        <div class="popup-rds-badge" id="sheet-rds-badge" style="margin-bottom:8px;">
+          <span class="rds-pulse-dot"></span>
+          <span class="popup-rds-label">RDS:</span>
+          <span class="popup-rds-title" id="sheet-rds-title">${isEn ? 'Loading live RDS...' : 'Pobieranie RDS...'}</span>
+        </div>
+      `;
+    }
+
+    document.getElementById('sheetBody').innerHTML = `
+      ${audioBtnHtml}
+      ${rdsHtml}
+      <div class="sheet-spec-grid">
+        <div class="sheet-spec-box">
+          <span class="spec-label">${isEn ? 'Frequency' : 'Częstotliwość'}</span>
+          <span class="spec-value">${t.frequency} ${t.frequencyUnit}</span>
+        </div>
+        <div class="sheet-spec-box">
+          <span class="spec-label">${isEn ? 'ERP Power' : 'Moc ERP'}</span>
+          <span class="spec-value">${t.powerKw} kW</span>
+        </div>
+        <div class="sheet-spec-box">
+          <span class="spec-label">${isEn ? 'Antenna' : 'Antena'}</span>
+          <span class="spec-value">${t.heightAgl}m (${t.polarization})</span>
+        </div>
+        <div class="sheet-spec-box">
+          <span class="spec-label">${isEn ? 'Range' : 'Zasięg'}</span>
+          <span class="spec-value">~${t.estimatedRangeKm} km</span>
+        </div>
+      </div>
+      <div class="sheet-actions-row">
+        <button class="btn-primary" id="sheetCalcBtn">📐 ${isEn ? 'Signal Calc' : 'Oblicz sygnał'}</button>
+        <button class="btn-secondary" id="sheetCoverageBtn">${isCircleActive ? (isEn ? '❌ Disable' : '❌ Wyłącz obręb') : (isEn ? '📡 Coverage' : '📡 Zasięg')}</button>
+        <button class="btn-secondary" id="sheetMoreBtn">ℹ️ ${isEn ? 'More' : 'Więcej'}</button>
+      </div>
+      ${sameSite.length > 0 ? `
+        <div class="sheet-same-site">
+          <div class="sheet-sub" style="margin-bottom:6px;">${isEn ? `Other on this mast (${sameSite.length}):` : `Inne z tego masztu (${sameSite.length}):`}</div>
+          <div class="sheet-chips-row">
+            ${sameSite.map(s => `
+              <button class="sheet-site-chip" data-sheet-tx-id="${s.id}">
+                ${escapeHtml(s.programOrMux)} (${s.frequency} ${s.frequencyUnit})
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+    `;
+
+    sheet.classList.remove('hidden');
+
+    // Attach sheet events
+    if (t.streamUrl) {
+      const playBtn = document.getElementById('sheetPlayAudioBtn');
+      if (playBtn) {
+        playBtn.onclick = () => {
+          playAudioStream(t.streamName || t.programOrMux, t.streamUrl, `${t.name} • ${t.frequency} ${t.frequencyUnit}`);
+        };
+      }
+    }
+    const sheetCalcBtn = document.getElementById('sheetCalcBtn');
+    if (sheetCalcBtn) {
+      sheetCalcBtn.onclick = () => {
+        openSignalCalculator(t);
+      };
+    }
+    const sheetCovBtn = document.getElementById('sheetCoverageBtn');
+    if (sheetCovBtn) {
+      sheetCovBtn.onclick = () => {
+        toggleCoverageCircle(t);
+        const active = activeCoverageCircles.has(t.id);
+        sheetCovBtn.textContent = active ? (isEn ? '❌ Disable' : '❌ Wyłącz obręb') : (isEn ? '📡 Coverage' : '📡 Zasięg');
+      };
+    }
+    const sheetMoreBtn = document.getElementById('sheetMoreBtn');
+    if (sheetMoreBtn) {
+      sheetMoreBtn.onclick = () => {
+        openDetailModal(t);
+      };
+    }
+
+    // Live RDS for sheet
+    const sheetRdsTitle = document.getElementById('sheet-rds-title');
+    if (sheetRdsTitle) {
+      fetch(`/api/rds?url=${encodeURIComponent(t.streamUrl || '')}&station=${encodeURIComponent(t.streamName || t.programOrMux)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.title) {
+            const cleanTitle = data.title.replace(/^\[\d{1,2}:\d{2}(?::\d{2})?\]\s*/, '').replace(/^\d{1,2}:\d{2}\s*[-–]\s*/, '').trim();
+            sheetRdsTitle.textContent = cleanTitle;
+          }
+        }).catch(() => {});
+    }
+
+    // Same site chip clicks in bottom sheet
+    sheet.querySelectorAll('[data-sheet-tx-id]').forEach(chip => {
+      chip.onclick = () => {
+        const targetId = Number(chip.dataset.sheetTxId);
+        const targetTx = allTransmitters.find(x => x.id === targetId);
+        if (targetTx) openTransmitterBottomSheet(targetTx);
+      };
+    });
   }
 
   // Coverage Circle Handling
@@ -2014,6 +2262,28 @@
         els.detailModal.classList.add('hidden');
       }
     });
+
+    // Bottom Sheet Close
+    const closeBottomSheetBtn = document.getElementById('closeBottomSheetBtn');
+    if (closeBottomSheetBtn) {
+      closeBottomSheetBtn.addEventListener('click', () => {
+        const sheet = document.getElementById('transmitterBottomSheet');
+        if (sheet) sheet.classList.add('hidden');
+      });
+    }
+
+    // Mobile Backdrop Close
+    const mobileBackdrop = document.getElementById('mobileBackdrop');
+    if (mobileBackdrop) {
+      mobileBackdrop.addEventListener('click', () => {
+        els.sidebar.classList.add('collapsed');
+        els.radioDrawer.classList.add('hidden');
+        els.listDrawer.classList.add('hidden');
+        const sheet = document.getElementById('transmitterBottomSheet');
+        if (sheet) sheet.classList.add('hidden');
+        mobileBackdrop.classList.add('hidden');
+      });
+    }
 
     // Calculator Modal
     els.closeCalcModalBtn.addEventListener('click', () => {
