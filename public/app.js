@@ -16,6 +16,12 @@
   let userLocationMarker = null;
   let userLatLng = null;
 
+  // Selected transmitter on map & marker lookup
+  const markerMap = new Map(); // id -> L.Marker
+  let selectedMarker = null;
+  let selectedTx = null;
+  let panelRdsTimer = null;
+
   // Active calculator measurement line and target marker
   let measurementLine = null;
   let targetLocationMarker = null;
@@ -234,7 +240,16 @@
     calcSubmitBtn: document.getElementById('calcSubmitBtn'),
     calcLoading: document.getElementById('calcLoading'),
     calcResults: document.getElementById('calcResults'),
-    mapToast: document.getElementById('mapToast')
+    mapToast: document.getElementById('mapToast'),
+    transmitterPanel: document.getElementById('transmitterPanel'),
+    closePanelBtn: document.getElementById('closePanelBtn'),
+    panelCategoryBadge: document.getElementById('panelCategoryBadge'),
+    panelSystemBadge: document.getElementById('panelSystemBadge'),
+    panelTitle: document.getElementById('panelTitle'),
+    panelLocation: document.getElementById('panelLocation'),
+    panelLogoWrap: document.getElementById('panelLogoWrap'),
+    panelLogoImg: document.getElementById('panelLogoImg'),
+    panelBody: document.getElementById('panelBody')
   };
 
   // Toast notification helper
@@ -448,6 +463,11 @@
     });
 
     map.addLayer(clusterGroup);
+
+    // Clicking empty map closes the transmitter info panel and removes dot highlight
+    map.on('click', () => {
+      closeTransmitterPanel();
+    });
   }
 
   // Load Stats from API
@@ -812,7 +832,7 @@
   // Render Markers on Map
   function renderMarkers() {
     clusterGroup.clearLayers();
-    // Do not clear activeCoverageCircles so manually opened circles persist across filter shifts!
+    markerMap.clear();
 
     const markers = [];
 
@@ -822,96 +842,29 @@
         title: `${t.name} - ${t.programOrMux} (${t.frequency} ${t.frequencyUnit})`
       });
 
-      // Bind popup (autoPan keeps popup and markers in viewport)
-      marker.bindPopup(() => createPopupHtml(t), {
-        maxWidth: 320,
-        className: 'custom-leaflet-popup popup-above-pin',
-        offset: [0, -22],
-        autoPan: true,
-        autoPanPaddingTopLeft: [60, 60],
-        autoPanPaddingBottomRight: [60, 60]
+      marker._transmitterId = t.id;
+      markerMap.set(t.id, marker);
+
+      // Lightweight non-blocking hover tooltip (vanishes on mouseout, never covers dots)
+      marker.bindTooltip(`
+        <div style="font-size:12px;font-weight:600;line-height:1.3;">
+          ${escapeHtml(t.programOrMux)}
+          <div style="font-weight:normal;opacity:0.8;font-size:11px;">${t.frequency} ${t.frequencyUnit} • ${escapeHtml(t.name)}</div>
+        </div>
+      `, {
+        direction: 'top',
+        offset: [0, -18],
+        opacity: 0.95,
+        className: 'custom-pin-tooltip'
       });
 
-      // Smart positioning: when clicked, calculate direction away from spiderfied center
-      marker.on('click', () => {
-        // Mobile & tablet: open sleek bottom sheet instead of blocking the map!
-        if (window.innerWidth <= 768) {
-          marker.closePopup();
-          openTransmitterBottomSheet(t);
-          return;
+      // On Marker Click: Open dedicated non-obscuring side panel / bottom sheet!
+      // This leaves 100% of spiderfied dots visible and clickable without being covered!
+      marker.on('click', (e) => {
+        if (e && e.originalEvent) {
+          e.originalEvent.stopPropagation();
         }
-
-        let offsetX = 0;
-        let offsetY = -24;
-        let popupClass = 'custom-leaflet-popup popup-above-pin';
-
-        if (clusterGroup && clusterGroup._spiderfied) {
-          const children = clusterGroup._spiderfied.getAllChildMarkers();
-          if (children && children.includes(marker)) {
-            const clickedPt = map.latLngToContainerPoint(marker.getLatLng());
-            
-            // Calculate centroid of the spider group
-            let sumX = 0;
-            let sumY = 0;
-            for (const child of children) {
-              const pt = map.latLngToContainerPoint(child.getLatLng());
-              sumX += pt.x;
-              sumY += pt.y;
-            }
-            const centerX = sumX / children.length;
-            const centerY = sumY / children.length;
-
-            const dy = clickedPt.y - centerY;
-            const dx = clickedPt.x - centerX;
-
-            // If marker is in the lower half of the spider ring:
-            // Open popup BELOW the dot so it NEVER covers the other dots above it!
-            if (dy > 8) {
-              offsetY = 32;
-              popupClass = 'custom-leaflet-popup popup-below-pin';
-            } else {
-              offsetY = -24;
-              popupClass = 'custom-leaflet-popup popup-above-pin';
-            }
-
-            // Offset horizontally if significantly to the left or right
-            if (Math.abs(dx) > 20) {
-              offsetX = Math.sign(dx) * 16;
-            }
-
-            // Ensure smooth panning so the popup and all other dots remain visible
-            setTimeout(() => {
-              const curPt = map.latLngToContainerPoint(marker.getLatLng());
-              const mapH = map.getSize().y;
-              if (dy > 8 && curPt.y > mapH - 280) {
-                map.panBy([0, 160], { animate: true, duration: 0.25 });
-              } else if (dy <= 8 && curPt.y < 280) {
-                map.panBy([0, -160], { animate: true, duration: 0.25 });
-              }
-            }, 60);
-          }
-        }
-
-        const popup = marker.getPopup();
-        if (popup) {
-          popup.options.offset = [offsetX, offsetY];
-          popup.options.className = popupClass;
-        }
-      });
-
-      marker.on('popupopen', () => {
-        const pinEl = marker.getElement()?.querySelector('.custom-pin');
-        if (pinEl) pinEl.classList.add('pin-selected');
-        attachPopupEvents(t, marker);
-      });
-
-      marker.on('popupclose', () => {
-        const pinEl = marker.getElement()?.querySelector('.custom-pin');
-        if (pinEl) pinEl.classList.remove('pin-selected');
-        if (marker._popupRdsTimer) {
-          clearInterval(marker._popupRdsTimer);
-          marker._popupRdsTimer = null;
-        }
+        openTransmitterPanel(t, marker);
       });
 
       markers.push(marker);
@@ -1179,146 +1132,280 @@
     }
   }
 
-  // Open Transmitter in Mobile / Tablet Non-Obscuring Bottom Sheet
-  function openTransmitterBottomSheet(t) {
-    const isEn = currentLang === 'en';
-    const sheet = document.getElementById('transmitterBottomSheet');
-    if (!sheet) return;
+  // Close Transmitter Panel
+  function closeTransmitterPanel() {
+    const panel = els.transmitterPanel || document.getElementById('transmitterPanel');
+    if (panel) panel.classList.add('hidden');
 
+    if (selectedMarker) {
+      const pinEl = selectedMarker.getElement()?.querySelector('.custom-pin');
+      if (pinEl) pinEl.classList.remove('pin-selected');
+      selectedMarker = null;
+    }
+    selectedTx = null;
+
+    if (panelRdsTimer) {
+      clearInterval(panelRdsTimer);
+      panelRdsTimer = null;
+    }
+  }
+
+  // Open Dedicated Non-Obscuring Transmitter Panel (Side card on Desktop, Bottom sheet on Mobile)
+  function openTransmitterPanel(t, marker = null) {
+    if (!t) return;
+    const isEn = currentLang === 'en';
+    const panel = els.transmitterPanel || document.getElementById('transmitterPanel');
+    if (!panel) return;
+
+    // Deselect previously selected marker
+    if (selectedMarker && selectedMarker !== marker) {
+      const oldPin = selectedMarker.getElement()?.querySelector('.custom-pin');
+      if (oldPin) oldPin.classList.remove('pin-selected');
+    }
+
+    // Select new marker
+    const activeMarker = marker || markerMap.get(t.id);
+    if (activeMarker) {
+      selectedMarker = activeMarker;
+      const newPin = activeMarker.getElement()?.querySelector('.custom-pin');
+      if (newPin) newPin.classList.add('pin-selected');
+
+      // Auto-pan if the marker is under the side panel (desktop) or bottom sheet (mobile)
+      setTimeout(() => {
+        try {
+          if (!map || !activeMarker) return;
+          const pt = map.latLngToContainerPoint(activeMarker.getLatLng());
+          const sz = map.getSize();
+          if (window.innerWidth > 768) {
+            // Desktop: Panel is at top-right (width ~380px)
+            if (pt.x > sz.x - 420) {
+              const dx = pt.x - (sz.x - 420) + 40;
+              map.panBy([dx, 0], { animate: true, duration: 0.3 });
+            }
+          } else {
+            // Mobile: Sheet is at bottom (~60% height)
+            if (pt.y > sz.y * 0.45) {
+              const dy = pt.y - sz.y * 0.35;
+              map.panBy([0, dy], { animate: true, duration: 0.3 });
+            }
+          }
+        } catch (_) {}
+      }, 50);
+    }
+    selectedTx = t;
+
+    // Set Station Logo
     const logoUrl = getStationLogo(t.programOrMux, t.streamName || t.broadcaster);
-    const logoImg = document.getElementById('sheetLogoImg');
-    const logoWrap = document.getElementById('sheetLogoWrap');
+    const logoImg = els.panelLogoImg || document.getElementById('panelLogoImg');
+    const logoWrap = els.panelLogoWrap || document.getElementById('panelLogoWrap');
 
     if (logoUrl && logoImg && logoWrap) {
       logoImg.src = logoUrl;
+      logoImg.alt = `${escapeHtml(t.programOrMux)} Logo`;
       logoImg.classList.remove('hidden');
       logoWrap.classList.remove('hidden');
     } else if (logoWrap) {
       logoWrap.classList.add('hidden');
     }
 
-    document.getElementById('sheetCategoryBadge').className = `badge badge-${t.category}`;
-    document.getElementById('sheetCategoryBadge').textContent = getCategoryLabel(t.category, currentLang);
-    document.getElementById('sheetSystemBadge').textContent = t.system;
-    document.getElementById('sheetTitle').textContent = `${t.name} (${t.programOrMux})`;
-    document.getElementById('sheetLocation').textContent = `${escapeHtml(t.broadcaster)} • ${escapeHtml(t.location || t.voivodeship)}`;
+    // Header Badges & Info
+    const catBadge = els.panelCategoryBadge || document.getElementById('panelCategoryBadge');
+    if (catBadge) {
+      catBadge.className = `badge badge-${t.category}`;
+      catBadge.textContent = getCategoryLabel(t.category, currentLang);
+    }
+    const sysBadge = els.panelSystemBadge || document.getElementById('panelSystemBadge');
+    if (sysBadge) {
+      sysBadge.textContent = t.system;
+    }
+    const titleEl = els.panelTitle || document.getElementById('panelTitle');
+    if (titleEl) {
+      titleEl.textContent = `${t.programOrMux} (${t.name})`;
+    }
+    const locEl = els.panelLocation || document.getElementById('panelLocation');
+    if (locEl) {
+      locEl.textContent = `${escapeHtml(t.broadcaster)} • ${escapeHtml(t.location || t.voivodeship)}`;
+    }
 
-    const sameSite = allTransmitters.filter(x => x.siteId === t.siteId && x.id !== t.id);
+    // Spec Values Formatting
+    const polDisplay = t.polarization === 'H' 
+      ? (isEn ? 'Horizontal (H)' : 'Pozioma (H)') 
+      : t.polarization === 'V' 
+      ? (isEn ? 'Vertical (V)' : 'Pionowa (V)') 
+      : (t.polarization || 'H');
+
+    const freqDisplay = t.channel 
+      ? `${t.frequency} ${t.frequencyUnit} (${isEn ? 'ch.' : 'k.'} ${t.channel})`
+      : `${t.frequency} ${t.frequencyUnit}`;
+
     const isCircleActive = activeCoverageCircles.has(t.id);
+    const sameSite = allTransmitters.filter(x => x.siteId === t.siteId);
 
+    // Audio stream button
     let audioBtnHtml = '';
     if (t.streamUrl) {
       audioBtnHtml = `
-        <button class="btn-success sheet-play-btn" id="sheetPlayAudioBtn">
+        <button class="panel-play-btn" id="panelPlayAudioBtn">
           ▶️ ${isEn ? 'Listen live:' : 'Odsłuchaj na żywo:'} ${escapeHtml(t.streamName || t.programOrMux)}
         </button>
       `;
     }
 
+    // Live RDS ticker for radio
     let rdsHtml = '';
     if (t.category === 'fm' || t.category === 'dab' || t.category === 'am') {
       rdsHtml = `
-        <div class="popup-rds-badge" id="sheet-rds-badge" style="margin-bottom:8px;">
+        <div class="popup-rds-badge" id="panelRdsBadge" style="margin-bottom:2px;">
           <span class="rds-pulse-dot"></span>
           <span class="popup-rds-label">RDS:</span>
-          <span class="popup-rds-title" id="sheet-rds-title">${isEn ? 'Loading live RDS...' : 'Pobieranie RDS...'}</span>
+          <span class="popup-rds-title" id="panelRdsTitle">${isEn ? 'Loading live RDS...' : 'Pobieranie RDS...'}</span>
         </div>
       `;
     }
 
-    document.getElementById('sheetBody').innerHTML = `
-      ${audioBtnHtml}
-      ${rdsHtml}
-      <div class="sheet-spec-grid">
-        <div class="sheet-spec-box">
-          <span class="spec-label">${isEn ? 'Frequency' : 'Częstotliwość'}</span>
-          <span class="spec-value">${t.frequency} ${t.frequencyUnit}</span>
+    // TV Channels list for TV multiplexes
+    let tvChannelsHtml = '';
+    if (t.channelsList && t.channelsList.length > 0) {
+      tvChannelsHtml = `
+        <div class="popup-tv-channels" style="margin-bottom:4px;">
+          <strong>${isEn ? `Channels in ${escapeHtml(t.programOrMux)}:` : `Kanały w ${escapeHtml(t.programOrMux)}:`}</strong>
+          <div style="margin-top:2px;font-size:11px;color:var(--text-muted);">${escapeHtml(t.channelsList.join(', '))}</div>
         </div>
-        <div class="sheet-spec-box">
-          <span class="spec-label">${isEn ? 'ERP Power' : 'Moc ERP'}</span>
-          <span class="spec-value">${t.powerKw} kW</span>
-        </div>
-        <div class="sheet-spec-box">
-          <span class="spec-label">${isEn ? 'Antenna' : 'Antena'}</span>
-          <span class="spec-value">${t.heightAgl}m (${t.polarization})</span>
-        </div>
-        <div class="sheet-spec-box">
-          <span class="spec-label">${isEn ? 'Range' : 'Zasięg'}</span>
-          <span class="spec-value">~${t.estimatedRangeKm} km</span>
-        </div>
-      </div>
-      <div class="sheet-actions-row">
-        <button class="btn-primary" id="sheetCalcBtn">📐 ${isEn ? 'Signal Calc' : 'Oblicz sygnał'}</button>
-        <button class="btn-secondary" id="sheetCoverageBtn">${isCircleActive ? (isEn ? '❌ Disable' : '❌ Wyłącz obręb') : (isEn ? '📡 Coverage' : '📡 Zasięg')}</button>
-        <button class="btn-secondary" id="sheetMoreBtn">ℹ️ ${isEn ? 'More' : 'Więcej'}</button>
-      </div>
-      ${sameSite.length > 0 ? `
-        <div class="sheet-same-site">
-          <div class="sheet-sub" style="margin-bottom:6px;">${isEn ? `Other on this mast (${sameSite.length}):` : `Inne z tego masztu (${sameSite.length}):`}</div>
-          <div class="sheet-chips-row">
-            ${sameSite.map(s => `
-              <button class="sheet-site-chip" data-sheet-tx-id="${s.id}">
-                ${escapeHtml(s.programOrMux)} (${s.frequency} ${s.frequencyUnit})
-              </button>
-            `).join('')}
+      `;
+    }
+
+    // Google Maps URL
+    const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lon}`;
+
+    // Body HTML
+    const bodyEl = els.panelBody || document.getElementById('panelBody');
+    if (bodyEl) {
+      bodyEl.innerHTML = `
+        ${audioBtnHtml}
+        ${rdsHtml}
+        ${tvChannelsHtml}
+        <div class="panel-spec-grid">
+          <div class="panel-spec-box">
+            <span class="spec-label">${isEn ? 'Frequency' : 'Częstotliwość'}</span>
+            <span class="spec-value">${freqDisplay}</span>
+          </div>
+          <div class="panel-spec-box">
+            <span class="spec-label">${isEn ? 'ERP Power' : 'Moc ERP'}</span>
+            <span class="spec-value">${t.powerKw} kW</span>
+          </div>
+          <div class="panel-spec-box">
+            <span class="spec-label">${isEn ? 'Antenna' : 'Antena'}</span>
+            <span class="spec-value">${t.heightAgl}m (${polDisplay.split(' ')[0]})</span>
+          </div>
+          <div class="panel-spec-box">
+            <span class="spec-label">${isEn ? 'Range' : 'Zasięg'}</span>
+            <span class="spec-value">~${t.estimatedRangeKm} km</span>
           </div>
         </div>
-      ` : ''}
-    `;
+        <div class="panel-actions-row">
+          <button class="btn-primary" id="panelCalcBtn" title="${isEn ? 'Calculate signal for any city or address' : 'Oblicz propagację sygnału dla dowolnego miasta lub adresu'}">
+            📐 ${isEn ? 'Signal Calc' : 'Oblicz sygnał'}
+          </button>
+          <button class="btn-secondary" id="panelCoverageBtn" title="${isEn ? 'Toggle estimated coverage circle on map' : 'Włącz / wyłącz okrąg szacowanego zasięgu na mapie'}">
+            ${isCircleActive ? (isEn ? '❌ Disable' : '❌ Wyłącz obręb') : (isEn ? '📡 Coverage' : '📡 Zasięg')}
+          </button>
+          <button class="btn-secondary" id="panelMoreBtn" title="${isEn ? 'View full UKE registration details' : 'Pełna karta danych z rejestru UKE'}">
+            ℹ️ ${isEn ? 'More' : 'Więcej'}
+          </button>
+          <a href="${gmapsUrl}" target="_blank" rel="noopener" class="btn-secondary" style="text-decoration:none;" title="Google Maps">
+            🗺️
+          </a>
+        </div>
+        ${sameSite.length > 1 ? `
+          <div class="panel-same-site">
+            <div class="panel-sub" style="margin-bottom:6px;font-weight:600;color:var(--text-main);">
+              ${isEn ? `Other on this mast (${sameSite.length - 1}):` : `Inne z tego masztu (${sameSite.length - 1}):`}
+            </div>
+            <div class="panel-chips-row">
+              ${sameSite.map(s => `
+                <button class="panel-site-chip ${s.id === t.id ? 'active-chip' : ''}" data-site-tx-id="${s.id}" title="${escapeHtml(s.name)} - ${s.frequency} ${s.frequencyUnit}">
+                  ${escapeHtml(s.programOrMux)} <span style="opacity:0.75;font-size:10px;">${s.frequency}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+      `;
 
-    sheet.classList.remove('hidden');
+      // Wire Audio Play Button
+      if (t.streamUrl) {
+        const playBtn = document.getElementById('panelPlayAudioBtn');
+        if (playBtn) {
+          playBtn.onclick = () => {
+            playAudioStream(t.streamName || t.programOrMux, t.streamUrl, `${t.name} • ${t.frequency} ${t.frequencyUnit}`);
+          };
+        }
+      }
 
-    // Attach sheet events
-    if (t.streamUrl) {
-      const playBtn = document.getElementById('sheetPlayAudioBtn');
-      if (playBtn) {
-        playBtn.onclick = () => {
-          playAudioStream(t.streamName || t.programOrMux, t.streamUrl, `${t.name} • ${t.frequency} ${t.frequencyUnit}`);
+      // Wire Signal Calc Button
+      const calcBtn = document.getElementById('panelCalcBtn');
+      if (calcBtn) {
+        calcBtn.onclick = () => openSignalCalculator(t);
+      }
+
+      // Wire Coverage Circle Button
+      const covBtn = document.getElementById('panelCoverageBtn');
+      if (covBtn) {
+        covBtn.onclick = () => {
+          toggleCoverageCircle(t);
+          const active = activeCoverageCircles.has(t.id);
+          covBtn.textContent = active ? (isEn ? '❌ Disable' : '❌ Wyłącz obręb') : (isEn ? '📡 Coverage' : '📡 Zasięg');
         };
       }
-    }
-    const sheetCalcBtn = document.getElementById('sheetCalcBtn');
-    if (sheetCalcBtn) {
-      sheetCalcBtn.onclick = () => {
-        openSignalCalculator(t);
-      };
-    }
-    const sheetCovBtn = document.getElementById('sheetCoverageBtn');
-    if (sheetCovBtn) {
-      sheetCovBtn.onclick = () => {
-        toggleCoverageCircle(t);
-        const active = activeCoverageCircles.has(t.id);
-        sheetCovBtn.textContent = active ? (isEn ? '❌ Disable' : '❌ Wyłącz obręb') : (isEn ? '📡 Coverage' : '📡 Zasięg');
-      };
-    }
-    const sheetMoreBtn = document.getElementById('sheetMoreBtn');
-    if (sheetMoreBtn) {
-      sheetMoreBtn.onclick = () => {
-        openDetailModal(t);
-      };
-    }
 
-    // Live RDS for sheet
-    const sheetRdsTitle = document.getElementById('sheet-rds-title');
-    if (sheetRdsTitle) {
-      fetch(`/api/rds?url=${encodeURIComponent(t.streamUrl || '')}&station=${encodeURIComponent(t.streamName || t.programOrMux)}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data && data.title) {
-            const cleanTitle = data.title.replace(/^\[\d{1,2}:\d{2}(?::\d{2})?\]\s*/, '').replace(/^\d{1,2}:\d{2}\s*[-–]\s*/, '').trim();
-            sheetRdsTitle.textContent = cleanTitle;
+      // Wire Full Details Modal Button
+      const moreBtn = document.getElementById('panelMoreBtn');
+      if (moreBtn) {
+        moreBtn.onclick = () => openDetailModal(t);
+      }
+
+      // Wire Same Mast Chips
+      bodyEl.querySelectorAll('[data-site-tx-id]').forEach(chip => {
+        chip.onclick = (e) => {
+          e.stopPropagation();
+          const targetId = Number(chip.dataset.siteTxId);
+          const targetTx = allTransmitters.find(x => x.id === targetId);
+          if (targetTx) {
+            const targetM = markerMap.get(targetId);
+            openTransmitterPanel(targetTx, targetM);
           }
-        }).catch(() => {});
+        };
+      });
     }
 
-    // Same site chip clicks in bottom sheet
-    sheet.querySelectorAll('[data-sheet-tx-id]').forEach(chip => {
-      chip.onclick = () => {
-        const targetId = Number(chip.dataset.sheetTxId);
-        const targetTx = allTransmitters.find(x => x.id === targetId);
-        if (targetTx) openTransmitterBottomSheet(targetTx);
+    // Live RDS Polling
+    if (panelRdsTimer) {
+      clearInterval(panelRdsTimer);
+      panelRdsTimer = null;
+    }
+    const rdsTitleEl = document.getElementById('panelRdsTitle');
+    if (rdsTitleEl) {
+      const fetchPanelRds = () => {
+        fetch(`/api/rds?url=${encodeURIComponent(t.streamUrl || '')}&station=${encodeURIComponent(t.streamName || t.programOrMux)}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data && data.title && rdsTitleEl) {
+              const cleanTitle = data.title.replace(/^\[\d{1,2}:\d{2}(?::\d{2})?\]\s*/, '').replace(/^\d{1,2}:\d{2}\s*[-–]\s*/, '').trim();
+              rdsTitleEl.textContent = cleanTitle;
+            }
+          }).catch(() => {});
       };
-    });
+      fetchPanelRds();
+      panelRdsTimer = setInterval(fetchPanelRds, 3000);
+    }
+
+    // Open panel
+    panel.classList.remove('hidden');
+  }
+
+  // Backwards compatibility alias
+  function openTransmitterBottomSheet(t) {
+    openTransmitterPanel(t, markerMap.get(t?.id));
   }
 
   // Coverage Circle Handling
@@ -1984,13 +2071,13 @@
 
       div.onclick = () => {
         map.setView([t.lat, t.lon], 13);
-        const marker = clusterGroup.getLayers().find(m => {
+        const marker = markerMap.get(t.id) || clusterGroup.getLayers().find(m => {
           const ll = m.getLatLng();
           return Math.abs(ll.lat - t.lat) < 0.0001 && Math.abs(ll.lng - t.lon) < 0.0001;
         });
         if (marker) {
           clusterGroup.zoomToShowLayer(marker, () => {
-            marker.openPopup();
+            openTransmitterPanel(t, marker);
           });
         }
       };
@@ -2263,14 +2350,31 @@
       }
     });
 
-    // Bottom Sheet Close
+    // Transmitter Panel Close & Map Event Isolation
+    const closePanelBtn = document.getElementById('closePanelBtn');
+    if (closePanelBtn) {
+      closePanelBtn.addEventListener('click', closeTransmitterPanel);
+    }
     const closeBottomSheetBtn = document.getElementById('closeBottomSheetBtn');
     if (closeBottomSheetBtn) {
-      closeBottomSheetBtn.addEventListener('click', () => {
-        const sheet = document.getElementById('transmitterBottomSheet');
-        if (sheet) sheet.classList.add('hidden');
-      });
+      closeBottomSheetBtn.addEventListener('click', closeTransmitterPanel);
     }
+    const txPanel = document.getElementById('transmitterPanel');
+    if (txPanel) {
+      L.DomEvent.disableClickPropagation(txPanel);
+      L.DomEvent.disableScrollPropagation(txPanel);
+    }
+
+    // Global Escape Key to close panel & modals
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeTransmitterPanel();
+        if (els.detailModal) els.detailModal.classList.add('hidden');
+        if (els.calcModal) els.calcModal.classList.add('hidden');
+        if (els.radioDrawer) els.radioDrawer.classList.add('hidden');
+        if (els.listDrawer) els.listDrawer.classList.add('hidden');
+      }
+    });
 
     // Mobile Backdrop Close
     const mobileBackdrop = document.getElementById('mobileBackdrop');
@@ -2279,8 +2383,7 @@
         els.sidebar.classList.add('collapsed');
         els.radioDrawer.classList.add('hidden');
         els.listDrawer.classList.add('hidden');
-        const sheet = document.getElementById('transmitterBottomSheet');
-        if (sheet) sheet.classList.add('hidden');
+        closeTransmitterPanel();
         mobileBackdrop.classList.add('hidden');
       });
     }

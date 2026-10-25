@@ -13,7 +13,7 @@
 ### 🌐 Wybierz język / Choose language:
 - [🇵🇱 Wersja polska (Polish version)](#-wersja-polska)
   - [🌟 Kluczowe funkcjonalności](#-kluczowe-funkcjonalności)
-  - [📐 Inteligentne dymki niezasłaniające nadajników](#2--inteligentne-dymki-i-dolny-panel-niezasłaniający-kropek)
+  - [📐 Dedykowany panel niezasłaniający kropek](#2--dedykowany-panel-boczny-i-dolny-100-wolnych-niezasłoniętych-kropek)
   - [📱 Responsywność (PC, Tablety, Smartfony)](#6--pełna-responsywność-pc-tablety-i-telefony)
   - [🚀 Szybki start lokalny](#-szybki-start)
   - [☁️ Tutorial: Wdrożenie na Vercel](#️-jak-wdrożyć-aplikację-na-vercel)
@@ -21,7 +21,7 @@
   - [📡 Endpointy API](#-endpointy-api-backendowego)
 - [🇬🇧 English version (Wersja angielska)](#-english-version)
   - [🌟 Key Features](#-key-features)
-  - [📐 Smart Non-Obscuring Popups & Bottom Sheet](#2--smart-non-obscuring-popups--bottom-sheet)
+  - [📐 Non-Obscuring Side Panel & Bottom Sheet](#2--non-obscuring-side-panel--bottom-sheet-100-uncovered-dots)
   - [📱 Full Responsiveness (PC, Tablets, Mobile)](#6--multi-device-responsiveness-pc-tablets-smartphones)
   - [🚀 Quick Start Guide](#-quick-start-guide)
   - [☁️ Tutorial: Deploying to Vercel](#️-how-to-deploy-to-vercel)
@@ -54,11 +54,13 @@ Aplikacja jest uruchomiona i gotowa do użycia pod adresem:
   - **MUX-L (Lokalne)**: *TVT Rybnik, TV Dami Radom, TVC Radomsko, Echo24 Wrocław, Stars.TV itp.*
   - **5G Broadcast**: testowe emisje nowej generacji telewizji mobilnej.
 
-### 2. 🎯 Inteligentne dymki i dolny panel niezasłaniający kropek
-- **Koniec z zasłanianiem nadajników**:
-  - Gdy maszt ma wiele nadajników (rozstrzelonych w okręgu spiderfied), kliknięcie w kropkę w dolnej części otwiera dymek **W DÓŁ** (pod kropką), a w górnej części **W GÓRĘ** (nad kropką). Wszystkie pozostałe kropki w klastrze pozostają w 100% odsłonięte i klikalne!
-  - **Szybkie kafelki w dymku (`Inne z tego masztu`)**: przełączaj się między wszystkimi emisjami z danej wieży jednym kliknięciem bez zamykania dymku.
-  - **Przycisk przypięcia `📌`**: jednym kliknięciem przenieś szczegóły do dolnego panelu, aby uwolnić całą mapę.
+### 2. 🎯 Dedykowany panel boczny i dolny (100% wolnych, niezasłoniętych kropek)
+- **Zero zasłaniania nadajników**:
+  - Zamiast balonów i dymków Leafleta, które zasłaniały sąsiednie kropki w klastrze, kliknięcie w dowolną kropkę otwiera **Dedykowany Panel Boczny** na komputerach (z prawej strony mapy) lub **Wysuwany Dolny Panel (Bottom Sheet)** na telefonach i tabletach.
+  - Kliknięta kropka zostaje wyróżniona pulsującą, neonową obwódką (`.pin-selected`), a **wszystkie pozostałe kropki w klastrze pozostają w 100% odsłonięte, widoczne i bezpośrednio klikalne**!
+  - **Lekkie dymki przy najechaniu (hover)**: najechanie myszką na kropkę wyświetla subtelny podgląd nazwy i częstotliwości, który natychmiast znika po zjechaniu kursorem.
+  - **Szybkie przełączanie masztu (`Inne z tego masztu`)**: przełączaj się między wszystkimi emisjami z danej wieży jednym kliknięciem bez zasłaniania mapy.
+  - **Płynne auto-dopasowanie mapy**: jeśli wybrana kropka znalazłaby się pod panelem, mapa delikatnie przesuwa się w wolne pole widzenia.
 
 ### 3. 📐 Realistyczny kalkulator sygnału i zasięgu w lokalizacji
 Kliknięcie przycisku **`📐 Oblicz sygnał`** pozwala sprawdzić warunki odbioru dla dowolnego adresu:
@@ -223,11 +225,13 @@ The application is deployed and live locally at:
   - **MUX-L (Local)**: *TVT Rybnik, TV Dami Radom, TVC Radomsko, Echo24 Wrocław, Stars.TV, etc.*
   - **5G Broadcast**: Experimental next-generation mobile broadcast transmissions.
 
-### 2. 🎯 Smart Non-Obscuring Popups & Bottom Sheet
-- **No More Hidden Markers**:
-  - In spiderfied clusters, clicking a bottom dot opens the popup **DOWNWARDS** (below the dot), and clicking a top dot opens it **UPWARDS**. The rest of the cluster dots remain 100% uncovered, visible, and directly clickable!
-  - **In-Popup Mast Switcher Chips (`Other on this mast`)**: Switch between all transmitters sharing the same tower directly with one tap.
-  - **Dock Button `📌`**: Instantly docks the card to the bottom sheet, completely freeing the map canvas.
+### 2. 🎯 Non-Obscuring Side Panel & Bottom Sheet (100% Uncovered Dots)
+- **Zero Marker Occlusion**:
+  - Replaced intrusive Leaflet marker balloon popups with a dedicated **Side Panel** on desktop and a sleek **Bottom Sheet** on mobile and tablets.
+  - The clicked transmitter marker is highlighted with a vivid pulsating halo (`.pin-selected`), leaving **100% of all other dots in the spiderfied cluster uncovered, visible, and directly clickable**!
+  - **Lightweight Hover Tooltips**: Hovering over a dot displays an instant glance at the station name and frequency, disappearing as soon as the mouse moves away.
+  - **Mast Switcher Chips (`Other on this mast`)**: Switch between all programs broadcast from that exact tower with one tap, highlighting each corresponding dot without reloading or obscuring the view.
+  - **Smooth Viewport Auto-Centering**: If a marker would be positioned beneath the panel or sheet, the map smoothly glides it into the clear viewing area.
 
 ### 3. 📐 Advanced Propagation & Signal Calculator
 Clicking **`📐 Calculate signal`** tests signal reception conditions for any location in Poland:

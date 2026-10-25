@@ -247,6 +247,32 @@
           <span class="btn-text" data-i18n="clearMeasureLine">Usuń linię pomiaru</span>
         </button>
 
+        <!-- Non-Obscuring Transmitter Info Panel (Side card on Desktop, Bottom sheet on Mobile/Tablet) -->
+        <aside id="transmitterPanel" class="transmitter-panel hidden" aria-label="Informacje o nadajniku">
+          <div class="panel-handle-bar" id="panelHandle">
+            <span class="sheet-drag-pill"></span>
+          </div>
+          <div class="panel-header">
+            <div class="panel-header-left">
+              <div class="panel-badge-row">
+                <span id="panelCategoryBadge" class="badge">FM</span>
+                <span id="panelSystemBadge" class="panel-system-badge">FM</span>
+              </div>
+              <h3 id="panelTitle" class="panel-title">Nazwa obiektu</h3>
+              <span id="panelLocation" class="panel-sub">Lokalizacja</span>
+            </div>
+            <div class="panel-header-right">
+              <div id="panelLogoWrap" class="panel-logo-wrap">
+                <img id="panelLogoImg" class="panel-logo-img hidden" src="" alt="Logo" />
+              </div>
+              <button id="closePanelBtn" class="close-btn" title="Zamknij (Esc)">&times;</button>
+            </div>
+          </div>
+          <div class="panel-body" id="panelBody">
+            <!-- Dynamically populated -->
+          </div>
+        </aside>
+
         <!-- Float Notification / Message -->
         <div id="mapToast" class="map-toast hidden"></div>
       </main>
@@ -307,31 +333,6 @@
       <button id="audioCloseBtn" class="audio-close-btn" title="Zamknij odtwarzacz">&times;</button>
     </div>
 
-    <!-- Mobile/Tablet Non-obscuring Transmitter Bottom Sheet -->
-    <div id="transmitterBottomSheet" class="transmitter-bottom-sheet hidden">
-      <div class="bottom-sheet-handle-bar" id="bottomSheetHandle">
-        <span class="sheet-drag-pill"></span>
-      </div>
-      <div class="bottom-sheet-header">
-        <div class="sheet-header-left">
-          <div class="sheet-badge-row">
-            <span id="sheetCategoryBadge" class="badge">FM</span>
-            <span id="sheetSystemBadge" class="sheet-system-badge">FM</span>
-          </div>
-          <h3 id="sheetTitle" class="sheet-title">Nazwa obiektu</h3>
-          <span id="sheetLocation" class="sheet-sub">Lokalizacja</span>
-        </div>
-        <div class="sheet-header-right">
-          <div id="sheetLogoWrap" class="sheet-logo-wrap">
-            <img id="sheetLogoImg" class="sheet-logo-img hidden" src="" alt="Logo" />
-          </div>
-          <button id="closeBottomSheetBtn" class="close-btn" title="Zamknij">&times;</button>
-        </div>
-      </div>
-      <div class="bottom-sheet-body" id="sheetBody">
-        <!-- Dynamically populated -->
-      </div>
-    </div>
 
     <!-- Mobile Screen Backdrop -->
     <div id="mobileBackdrop" class="mobile-backdrop hidden"></div>
