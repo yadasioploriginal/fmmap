@@ -2,8 +2,26 @@
   "version": 2,
   "builds": [
     {
+      "src": "api/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "config.json",
+          "data/**",
+          "public/**"
+        ]
+      }
+    },
+    {
       "src": "src/server.ts",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "config.json",
+          "data/**",
+          "public/**"
+        ]
+      }
     },
     {
       "src": "public/**",
@@ -13,7 +31,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "src/server.ts"
+      "dest": "api/index.ts"
     },
     {
       "src": "/(.*)",

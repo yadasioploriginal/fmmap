@@ -6,16 +6,58 @@ import { exec } from 'child_process';
 import { AppConfig, Transmitter } from './types.js';
 import { getOrBuildTransmitterCache } from './data-parser.js';
 
+const DEFAULT_CONFIG: AppConfig = {
+  server: { port: 9354, host: '0.0.0.0' },
+  map: {
+    title: 'Polska - Mapa nadajników DVB-T/DVB-T2 oraz Radio FM / DAB+ / AM',
+    initialCenter: [52.0693, 19.4803],
+    initialZoom: 7,
+    minZoom: 5,
+    maxZoom: 18,
+    tileLayer: {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    },
+    enableClustering: true,
+    maxClusterRadius: 50,
+    showCoverageOnMarkerClick: false
+  },
+  filters: {
+    defaultVisible: { tv: true, fm: true, dab: true, am: true },
+    defaultMinPowerKw: 0
+  },
+  data: {
+    dataPath: './data/transmitters.json',
+    rawTvPath: './data_raw/tv/pozwolenia_ntc_r_2026-09-18.csv',
+    rawFmPath: './data_raw/radio/pozwolenie_ukf_r_2026-08-27.csv',
+    rawDabPath: './data_raw/radio/pozwolenia_dab_r_2026-08-27.csv',
+    rawFaleSredniePath: './data_raw/radio/pozwolenia_falesrednie_r_2026-08-27.csv',
+    rawFaleDlugiePath: './data_raw/radio/pozwolenia_faledlugie_2026-08-27.csv'
+  }
+};
+
 function loadConfig(): AppConfig {
-  const configPath = path.resolve(process.cwd(), 'config.json');
-  if (fs.existsSync(configPath)) {
-    return JSON.parse(fs.readFileSync(configPath, 'utf8')) as AppConfig;
+  const candidatePaths = [
+    path.resolve(process.cwd(), 'config.json'),
+    path.resolve(__dirname, '../config.json'),
+    path.resolve(__dirname, '../../config.json'),
+    path.resolve(__dirname, 'config.json'),
+    path.resolve(process.cwd(), 'public/config.json'),
+    path.resolve(__dirname, '../public/config.json')
+  ];
+
+  for (const configPath of candidatePaths) {
+    if (fs.existsSync(configPath)) {
+      try {
+        return JSON.parse(fs.readFileSync(configPath, 'utf8')) as AppConfig;
+      } catch (err) {
+        console.warn(`Error parsing config at ${configPath}:`, err);
+      }
+    }
   }
-  const altPath = path.resolve(__dirname, '../config.json');
-  if (fs.existsSync(altPath)) {
-    return JSON.parse(fs.readFileSync(altPath, 'utf8')) as AppConfig;
-  }
-  throw new Error(`Configuration file not found: ${configPath}`);
+
+  console.warn('Configuration file not found on disk, using built-in default configuration.');
+  return DEFAULT_CONFIG;
 }
 
 const config = loadConfig();
@@ -239,8 +281,18 @@ function fetchRdsFromStream(url: string, stationHint = '', timeoutMs = 3500): Pr
   });
 }
 
+// API: Health check
+app.get(['/api', '/api/health', '/health'], (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    environment: process.env.VERCEL ? 'vercel' : 'node',
+    transmittersCount: transmitters.length,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // API: Get live RDS / ICY metadata for a radio stream
-app.get('/api/rds', async (req: Request, res: Response) => {
+app.get(['/api/rds', '/rds'], async (req: Request, res: Response) => {
   try {
     let streamUrl = (req.query.url as string) || '';
     const stationHint = (req.query.station as string) || '';
@@ -291,7 +343,7 @@ app.get('/api/rds', async (req: Request, res: Response) => {
 });
 
 // API: Get current config (safe for frontend)
-app.get('/api/config', (_req: Request, res: Response) => {
+app.get(['/api/config', '/config'], (_req: Request, res: Response) => {
   try {
     const currentConfig = loadConfig();
     res.json({
@@ -312,7 +364,7 @@ app.get('/api/config', (_req: Request, res: Response) => {
 });
 
 // API: Geocode city / municipality / street using Nominatim
-app.get('/api/geocode', async (req: Request, res: Response) => {
+app.get(['/api/geocode', '/geocode'], async (req: Request, res: Response) => {
   try {
     const q = req.query.q as string;
     if (!q || q.trim().length === 0) {
@@ -345,22 +397,30 @@ app.get('/api/geocode', async (req: Request, res: Response) => {
 });
 
 // API: Get verified working radio streams
-app.get('/api/radio-streams', (_req: Request, res: Response) => {
+app.get(['/api/radio-streams', '/radio-streams'], (_req: Request, res: Response) => {
   try {
-    const p = path.resolve('./data/working_radio_streams.json');
-    if (fs.existsSync(p)) {
-      const streams = JSON.parse(fs.readFileSync(p, 'utf8'));
-      res.json(streams);
-    } else {
-      res.json([]);
+    const candidatePaths = [
+      path.resolve('./data/working_radio_streams.json'),
+      path.resolve(process.cwd(), 'data/working_radio_streams.json'),
+      path.resolve(process.cwd(), 'public/data/working_radio_streams.json'),
+      path.resolve(__dirname, '../data/working_radio_streams.json'),
+      path.resolve(__dirname, '../../data/working_radio_streams.json'),
+      path.resolve(__dirname, '../public/data/working_radio_streams.json')
+    ];
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        const streams = JSON.parse(fs.readFileSync(p, 'utf8'));
+        return res.json(streams);
+      }
     }
+    res.json([]);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // API: Get all broadcasts from the same transmitter site / mast
-app.get('/api/site/:siteId', (req: Request, res: Response) => {
+app.get(['/api/site/:siteId', '/site/:siteId'], (req: Request, res: Response) => {
   try {
     const siteId = req.params.siteId;
     const sameSite = transmitters.filter(t => t.siteId === siteId);
@@ -381,7 +441,7 @@ function stripDiacritics(str: string): string {
 }
 
 // API: Get transmitters with optional filtering
-app.get('/api/transmitters', (req: Request, res: Response) => {
+app.get(['/api/transmitters', '/transmitters'], (req: Request, res: Response) => {
   try {
     let result = transmitters;
     const { category, q, voivodeship, minPower, mux, system } = req.query;
@@ -433,7 +493,7 @@ app.get('/api/transmitters', (req: Request, res: Response) => {
 });
 
 // API: Stats & Metadata for filters
-app.get('/api/stats', (_req: Request, res: Response) => {
+app.get(['/api/stats', '/stats'], (_req: Request, res: Response) => {
   try {
     const counts: Record<string, number> = { tv: 0, fm: 0, dab: 0, am: 0, total: transmitters.length };
     const voivodeships = new Set<string>();
@@ -459,7 +519,7 @@ app.get('/api/stats', (_req: Request, res: Response) => {
 });
 
 // API: Reload data from raw files
-app.post('/api/reload', (_req: Request, res: Response) => {
+app.post(['/api/reload', '/reload'], (_req: Request, res: Response) => {
   try {
     const currentConfig = loadConfig();
     transmitters = getOrBuildTransmitterCache(currentConfig, true);

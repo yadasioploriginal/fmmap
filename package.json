@@ -4,7 +4,7 @@
   "description": "Mapa nadajników telewizyjnych DVB-T/DVB-T2 oraz radiowych FM/DAB+/AM w Polsce",
   "main": "src/server.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs = require('fs'); fs.mkdirSync('public/data', {recursive:true}); fs.copyFileSync('data/transmitters.json', 'public/data/transmitters.json'); fs.copyFileSync('data/working_radio_streams.json', 'public/data/working_radio_streams.json'); fs.copyFileSync('config.json', 'public/config.json');\"",
     "start": "tsx src/server.ts",
     "dev": "tsx watch src/server.ts",
     "parse-data": "tsx src/data-parser.ts"

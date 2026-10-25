@@ -31,11 +31,20 @@ function getTvChannels(muxName: string): string[] {
 }
 
 function loadVerifiedRadioStreams(): RadioStream[] {
-  const p = path.resolve('./data/working_radio_streams.json');
-  if (fs.existsSync(p)) {
-    try {
-      return JSON.parse(fs.readFileSync(p, 'utf8')) as RadioStream[];
-    } catch {}
+  const candidatePaths = [
+    path.resolve('./data/working_radio_streams.json'),
+    path.resolve(process.cwd(), 'data/working_radio_streams.json'),
+    path.resolve(process.cwd(), 'public/data/working_radio_streams.json'),
+    path.resolve(__dirname, '../data/working_radio_streams.json'),
+    path.resolve(__dirname, '../../data/working_radio_streams.json'),
+    path.resolve(__dirname, '../public/data/working_radio_streams.json')
+  ];
+  for (const p of candidatePaths) {
+    if (fs.existsSync(p)) {
+      try {
+        return JSON.parse(fs.readFileSync(p, 'utf8')) as RadioStream[];
+      } catch {}
+    }
   }
   return [];
 }
@@ -503,30 +512,55 @@ export function parseAllTransmitters(config: AppConfig): Transmitter[] {
 }
 
 export function getOrBuildTransmitterCache(config: AppConfig, forceRebuild = false): Transmitter[] {
-  const jsonPath = path.resolve(config.data.dataPath);
-  if (!forceRebuild && fs.existsSync(jsonPath)) {
-    try {
-      const raw = fs.readFileSync(jsonPath, 'utf8');
-      const data = JSON.parse(raw) as Transmitter[];
-      if (Array.isArray(data) && data.length > 0) {
-        return data;
+  const candidatePaths = [
+    path.resolve(config.data.dataPath),
+    path.resolve(process.cwd(), 'data/transmitters.json'),
+    path.resolve(process.cwd(), 'public/data/transmitters.json'),
+    path.resolve(__dirname, '../data/transmitters.json'),
+    path.resolve(__dirname, '../../data/transmitters.json'),
+    path.resolve(__dirname, 'transmitters.json'),
+    path.resolve(__dirname, '../public/data/transmitters.json')
+  ];
+
+  if (!forceRebuild) {
+    for (const jsonPath of candidatePaths) {
+      if (fs.existsSync(jsonPath)) {
+        try {
+          const raw = fs.readFileSync(jsonPath, 'utf8');
+          const data = JSON.parse(raw) as Transmitter[];
+          if (Array.isArray(data) && data.length > 0) {
+            console.log(`Loaded ${data.length} transmitters from ${jsonPath}`);
+            return data;
+          }
+        } catch (e) {
+          console.warn(`Failed reading transmitters from ${jsonPath}:`, e);
+        }
       }
-    } catch (e) {
-      console.warn('Failed to read transmitters JSON cache, rebuilding...', e);
     }
   }
 
-  console.log('Parsing raw UKE transmitter data and attaching streams & channels...');
-  const data = parseAllTransmitters(config);
-  
-  const dataDir = path.dirname(jsonPath);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+  // When running in serverless / read-only Vercel environment, never attempt rebuilding from raw CSVs
+  if (process.env.VERCEL) {
+    console.warn('Running on Vercel: prebuilt transmitters.json not found in paths.');
+    return [];
   }
 
-  fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2), 'utf8');
-  console.log(`Saved ${data.length} parsed transmitters to ${jsonPath}`);
-  return data;
+  console.log('Parsing raw UKE transmitter data and attaching streams & channels...');
+  try {
+    const data = parseAllTransmitters(config);
+    const jsonPath = path.resolve(config.data.dataPath);
+    const dataDir = path.dirname(jsonPath);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2), 'utf8');
+    console.log(`Saved ${data.length} parsed transmitters to ${jsonPath}`);
+    return data;
+  } catch (err) {
+    console.error('Failed to parse transmitters:', err);
+    return [];
+  }
 }
 
 if (process.argv[1] && process.argv[1].endsWith('data-parser.ts')) {

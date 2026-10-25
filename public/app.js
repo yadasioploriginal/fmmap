@@ -393,9 +393,39 @@
   // Initialize App
   async function init() {
     try {
-      // 1. Fetch Config
-      const configRes = await fetch('/api/config');
-      config = await configRes.json();
+      // 1. Fetch Config with static fallback
+      try {
+        const configRes = await fetch('/api/config');
+        if (configRes.ok) {
+          const text = await configRes.text();
+          if (text && text.trim().startsWith('{')) {
+            config = JSON.parse(text);
+          }
+        }
+      } catch (e) {
+        console.warn('Backend /api/config unavailable, trying static /config.json...', e);
+      }
+
+      if (!config) {
+        try {
+          const staticRes = await fetch('/config.json');
+          if (staticRes.ok) {
+            config = await staticRes.json();
+          }
+        } catch (_) {}
+      }
+
+      if (!config) {
+        config = {
+          title: 'Polska - Mapa nadajników DVB-T/DVB-T2 oraz Radio FM / DAB+ / AM',
+          initialCenter: [52.0693, 19.4803],
+          initialZoom: 7,
+          minZoom: 5,
+          maxZoom: 18,
+          filters: { defaultVisible: { tv: true, fm: true, dab: true, am: true } }
+        };
+      }
+
       document.title = config.title || document.title;
 
       if (config.filters && config.filters.defaultVisible) {
@@ -410,16 +440,19 @@
       // 2. Initialize Leaflet Map
       initMap();
 
-      // 3. Load Stats, Transmitters & Radio Streams
-      await Promise.all([loadStats(), loadTransmitters(), loadRadioStreams()]);
+      // 3. Load Transmitters & Radio Streams first (with CDN static fallback)
+      await Promise.all([loadTransmitters(), loadRadioStreams()]);
 
-      // 4. Attach Event Listeners
+      // 4. Load Stats or compute locally
+      await loadStats();
+
+      // 5. Attach Event Listeners
       setupEvents();
 
       // Apply initial language (PL / EN)
       applyLanguage();
 
-      // 5. Initial Render
+      // 6. Initial Render
       applyFilters();
     } catch (err) {
       console.error('Initialization error:', err);
@@ -470,57 +503,155 @@
     });
   }
 
-  // Load Stats from API
-  async function loadStats() {
-    const res = await fetch('/api/stats');
-    const stats = await res.json();
-
+  // Apply stats data to UI
+  function applyStatsData(stats) {
+    if (!stats) return;
     if (stats.counts) {
-      els.countTv.textContent = stats.counts.tv?.toLocaleString('pl-PL') || '0';
-      els.countFm.textContent = stats.counts.fm?.toLocaleString('pl-PL') || '0';
-      els.countDab.textContent = stats.counts.dab?.toLocaleString('pl-PL') || '0';
-      els.countAm.textContent = stats.counts.am?.toLocaleString('pl-PL') || '0';
-      els.statTotal.textContent = stats.counts.total?.toLocaleString('pl-PL') || '0';
+      if (els.countTv) els.countTv.textContent = stats.counts.tv?.toLocaleString('pl-PL') || '0';
+      if (els.countFm) els.countFm.textContent = stats.counts.fm?.toLocaleString('pl-PL') || '0';
+      if (els.countDab) els.countDab.textContent = stats.counts.dab?.toLocaleString('pl-PL') || '0';
+      if (els.countAm) els.countAm.textContent = stats.counts.am?.toLocaleString('pl-PL') || '0';
+      if (els.statTotal) els.statTotal.textContent = stats.counts.total?.toLocaleString('pl-PL') || '0';
     }
 
     // Populate Voivodeship select
-    if (stats.voivodeships) {
+    if (stats.voivodeships && els.voivodeshipSelect) {
+      const cur = els.voivodeshipSelect.value;
+      els.voivodeshipSelect.innerHTML = `<option value="ALL" data-i18n="allVoivodeships">${currentLang === 'en' ? 'All voivodeships' : 'Wszystkie województwa'}</option>`;
       stats.voivodeships.forEach(v => {
         const opt = document.createElement('option');
         opt.value = v;
         opt.textContent = v.charAt(0) + v.slice(1).toLowerCase();
         els.voivodeshipSelect.appendChild(opt);
       });
+      els.voivodeshipSelect.value = cur || 'ALL';
     }
 
     // Populate TV Multiplex select
-    if (stats.tvMultiplexes) {
+    if (stats.tvMultiplexes && els.muxSelect) {
+      const cur = els.muxSelect.value;
+      els.muxSelect.innerHTML = `<option value="ALL" data-i18n="allMuxes">${currentLang === 'en' ? 'All multiplexes' : 'Wszystkie multipleksy'}</option>`;
       stats.tvMultiplexes.forEach(m => {
         const opt = document.createElement('option');
         opt.value = m;
         opt.textContent = m;
         els.muxSelect.appendChild(opt);
       });
+      els.muxSelect.value = cur || 'ALL';
     }
   }
 
-  // Load Transmitters
-  async function loadTransmitters() {
-    const res = await fetch('/api/transmitters');
-    allTransmitters = await res.json();
-    console.log(`Pomyślnie załadowano ${allTransmitters.length} nadajników.`);
+  // Compute stats locally from allTransmitters array if backend stats unavailable
+  function computeStatsLocally() {
+    if (!allTransmitters || allTransmitters.length === 0) return;
+    const counts = { tv: 0, fm: 0, dab: 0, am: 0, total: allTransmitters.length };
+    const voivodeships = new Set();
+    const muxes = new Set();
+    const systems = new Set();
+
+    for (const t of allTransmitters) {
+      counts[t.category] = (counts[t.category] || 0) + 1;
+      if (t.voivodeship) voivodeships.add(t.voivodeship);
+      if (t.category === 'tv' && t.programOrMux) muxes.add(t.programOrMux);
+      if (t.system) systems.add(t.system);
+    }
+
+    applyStatsData({
+      counts,
+      voivodeships: Array.from(voivodeships).sort(),
+      tvMultiplexes: Array.from(muxes).sort(),
+      systems: Array.from(systems).sort()
+    });
   }
 
-  // Load Verified Radio Streams
+  // Load Stats from API with local computation fallback
+  async function loadStats() {
+    try {
+      const res = await fetch('/api/stats');
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.trim().startsWith('{')) {
+          const stats = JSON.parse(text);
+          applyStatsData(stats);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Fallback: Compute directly from loaded dataset
+    computeStatsLocally();
+  }
+
+  // Load Transmitters with Static Fallback (100% reliable on Vercel CDN)
+  async function loadTransmitters() {
+    let loaded = false;
+
+    // 1. Try backend API first
+    try {
+      const res = await fetch('/api/transmitters');
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.trim().startsWith('[')) {
+          const data = JSON.parse(text);
+          if (Array.isArray(data) && data.length > 0) {
+            allTransmitters = data;
+            loaded = true;
+            console.log(`Załadowano ${allTransmitters.length} nadajników z /api/transmitters.`);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('API /api/transmitters niedostępne, próba załadowania z /data/transmitters.json...', e);
+    }
+
+    // 2. Fallback to static CDN JSON (always present in public/data/)
+    if (!loaded) {
+      try {
+        const staticRes = await fetch('/data/transmitters.json');
+        if (staticRes.ok) {
+          allTransmitters = await staticRes.json();
+          loaded = true;
+          console.log(`Załadowano ${allTransmitters.length} nadajników ze statycznego pliku CDN /data/transmitters.json.`);
+        }
+      } catch (e2) {
+        console.error('Błąd pobierania statycznego pliku transmitters.json:', e2);
+      }
+    }
+
+    if (!loaded || !allTransmitters || allTransmitters.length === 0) {
+      throw new Error('Baza nadajników jest chwilowo niedostępna.');
+    }
+  }
+
+  // Load Verified Radio Streams with Static Fallback
   async function loadRadioStreams() {
     try {
       const res = await fetch('/api/radio-streams');
-      verifiedStreams = await res.json();
-      els.radioStreamsCount.textContent = verifiedStreams.length;
-      renderRadioStreamsList(verifiedStreams);
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.trim().startsWith('[')) {
+          verifiedStreams = JSON.parse(text);
+        } else {
+          throw new Error('Invalid JSON');
+        }
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
     } catch (e) {
-      console.warn('Nie udało się załadować strumieni radiowych:', e);
+      try {
+        const staticRes = await fetch('/data/working_radio_streams.json');
+        if (staticRes.ok) {
+          verifiedStreams = await staticRes.json();
+        }
+      } catch (_) {
+        verifiedStreams = [];
+      }
     }
+
+    if (els.radioStreamsCount) {
+      els.radioStreamsCount.textContent = verifiedStreams.length;
+    }
+    renderRadioStreamsList(verifiedStreams);
   }
 
   // Station Logo Matcher (matches the 12 logos in /public/img/stacje)
@@ -1517,8 +1648,24 @@
     els.calcResults.classList.add('hidden');
 
     try {
-      const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
-      const results = await res.json();
+      let results = null;
+      try {
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+        if (res.ok) {
+          const text = await res.text();
+          if (text && text.trim().startsWith('[')) {
+            results = JSON.parse(text);
+          }
+        }
+      } catch (_) {}
+
+      // Fallback: direct Nominatim call if backend endpoint unavailable
+      if (!results) {
+        const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=pl&q=${encodeURIComponent(q)}`);
+        if (nomRes.ok) {
+          results = await nomRes.json();
+        }
+      }
 
       els.calcLoading.classList.add('hidden');
 
